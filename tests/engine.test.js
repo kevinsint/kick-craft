@@ -54,13 +54,29 @@ for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0
 /* the body's pitch curve does not move the click */
 assert.deepStrictEqual(hit({ curve: 20 }, 0.25).click, hit({ curve: 96 }, 0.25).click, 'the click changed with the body\'s PITCH CURVE');
 
-/* the rumble ends on the clock: LENGTH is a part of a bar at the tempo */
+/* the rumble ends on the clock: LENGTH is a part of a bar at the tempo, and it only closes the gate (SIZE at its top, so the tail is longer than each LENGTH) */
 for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 2], [2, 90, 1 / 4]]) {
-  const seconds = bars * 240 / bpm, rumble = hit({ rlen, bpm, rattack: 0 }, seconds * 1.6 + 0.3).rumble, top = peak(rumble);
+  const seconds = bars * 240 / bpm, rumble = hit({ rlen, bpm, rattack: 0, size: 127 }, seconds * 1.6 + 0.3).rumble, top = peak(rumble);
   let last = 0;
   rumble.forEach((v, i) => { if (Math.abs(v) > top / 1000) last = i; });
   assert.ok(last / RATE <= seconds * 1.02, `LENGTH ${bars} at ${bpm} BPM: the rumble goes on after ${seconds} s`);
   assert.ok(last / RATE >= seconds * 0.85, `LENGTH ${bars} at ${bpm} BPM: the rumble stops long before ${seconds} s`);
+}
+
+/* the TEMPO does not change the sound of a hit: the body and the click are the same, and the rumble is the same until its gate starts to close */
+{
+  const slow = hit({ bpm: 90, rlen: 3 }, 0.6), fast = hit({ bpm: 180, rlen: 3 }, 0.6), same = Math.floor(0.7 * (1 / 2 * 240 / 180) * RATE) - 1;
+  assert.deepStrictEqual(fast.body, slow.body, 'the body changed with the TEMPO');
+  assert.deepStrictEqual(fast.click, slow.click, 'the click changed with the TEMPO');
+  assert.ok(peak(slow.rumble.subarray(0, same)) > 0.01, 'the rumble is silent');
+  assert.deepStrictEqual(fast.rumble.subarray(0, same), slow.rumble.subarray(0, same), 'the rumble changed with the TEMPO before its gate closes');
+}
+
+/* SIZE is the reverb's own time, not on the clock: a larger SIZE leaves more of the tail at the same LENGTH and TEMPO */
+{
+  const level = (wave) => Math.sqrt(wave.subarray(Math.floor(0.8 * RATE), Math.floor(1.2 * RATE)).reduce((sum, v) => sum + v * v, 0));
+  const small = hit({ size: 20, rlen: 4, rattack: 0 }, 1.3).rumble, large = hit({ size: 120, rlen: 4, rattack: 0 }, 1.3).rumble;
+  assert.ok(level(large) > 10 * level(small), 'SIZE does not change the length of the reverb\'s tail');
 }
 
 console.log('engine: all tests pass');
