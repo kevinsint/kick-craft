@@ -25,7 +25,7 @@ const allFinite = (wave) => wave.every(Number.isFinite);
 /* every click mode and drive type, at both ends of the knobs, through the output filter: no bad value, no overload */
 for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0, 127]) {
   const out = new Float32Array(48000), kick = makeKickEngine(48000);
-  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack: end, drive: end, rphase: end, sweep: end, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch: end ? 60 : 0, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true, drone: true });
+  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack: end, drive: end, rphase: end, sweep1: end, sweep2: 127 - end, depth2: end, curve2: end, bmod: end ? 120 : 50, bpts: end ? 3 : 0, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch1: end ? 60 : 0, pitch2: end ? 0 : 60, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true, drone: true });
   kick.process(out);
   assert.ok(allFinite(out), `mode ${mode}, type ${type}, knobs at ${end}: a value is not a number`);
   assert.ok(peak(out) <= 1, `mode ${mode}, type ${type}, knobs at ${end}: the output is above full level`);
@@ -52,7 +52,7 @@ for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0
 }
 
 /* the body's pitch curve does not move the click */
-assert.deepStrictEqual(hit({ curve: 20 }, 0.25).click, hit({ curve: 96 }, 0.25).click, 'the click changed with the body\'s PITCH CURVE');
+assert.deepStrictEqual(hit({ curve1: 20 }, 0.25).click, hit({ curve1: 96 }, 0.25).click, 'the click changed with the body\'s PITCH CURVE');
 
 /* the rumble ends on the clock: LENGTH is a part of a bar at the tempo, and it only closes the gate (SIZE at its top, so the tail is longer than each LENGTH) */
 for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 2], [2, 90, 1 / 4]]) {
@@ -160,6 +160,25 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   }
   assert.notDeepStrictEqual(click({ ...one, ...two, cmod: 0 }), click({ ...one, ...two, cmod: 40 }), 'MOD LEVEL does not change the click');
   assert.deepStrictEqual(click({ cmod: 90, cpts: 3 }), click({}), 'MOD LEVEL changes the click when all the markers are the same');
+}
+
+/* the body's MOD LEVEL morphs PITCH, DEPTH, SWEEP and PITCH CURVE between 2 to 5 markers, as the click's does, and the two MOD LEVELs do not move each other */
+{
+  const shot = (values) => hit({ rumble: 0, tex: 0, bpts: 0, ...values }, 0.2), body = (values) => shot(values).body;      /* 2 markers, when the test does not give another number */
+  const one = { pitch1: 12, depth1: 20, sweep1: 30, curve1: 10 }, two = { pitch2: 36, depth2: 100, sweep2: 90, curve2: 120 }, three = { pitch3: 5, depth3: 127, sweep3: 0, curve3: 60 };
+  const as1 = (marker, n) => Object.fromEntries(Object.entries(marker).map(([name, v]) => [name.replace(String(n), '1'), v]));      /* a marker's values, put at marker 1 */
+  assert.notDeepStrictEqual(body(one), body(as1(two, 2)), 'the body\'s markers do not change the body');
+  assert.deepStrictEqual(body({ ...one, ...two, bmod: 0 }), body(one), 'the body\'s MOD LEVEL at 0 is not marker 1');
+  assert.deepStrictEqual(body({ ...one, ...two, bmod: 120 }), body(as1(two, 2)), 'the body\'s MOD LEVEL at its top is not the last of 2 markers');
+  assert.deepStrictEqual(body({ ...one, ...two, ...three, bpts: 1, bmod: 60 }), body(as1(two, 2)), 'the body\'s MOD LEVEL at the middle is not marker 2 of 3');
+  assert.deepStrictEqual(body({ ...one, ...two, ...three, bpts: 1, bmod: 120 }), body(as1(three, 3)), 'the body\'s MOD LEVEL at its top is not the last of 3 markers');
+  assert.deepStrictEqual(body({ ...one, ...two, bmod: 60 }), body({ pitch1: 24, depth1: 60, sweep1: 60, curve1: 65 }), 'the body\'s MOD LEVEL between two markers does not mix their values');
+  assert.deepStrictEqual(body({ ...one, ...two, bpts: -1, bmod: 90 }), body(one), 'with one marker the body is not marker 1 at each MOD LEVEL');
+  assert.deepStrictEqual(hit({ rumble: 0, tex: 0, ...one, ...two, bmod: 90 }, 0.2).body, body(one), 'a kick with no number of body markers does not have one marker');
+  assert.deepStrictEqual(shot({ ...one, ...two, bmod: 90 }).click, shot(one).click, 'the body\'s MOD LEVEL moves the click');
+  assert.deepStrictEqual(shot({ tune2: 100, cpts: 0, cmod: 90 }).body, shot({}).body, 'the click\'s MOD LEVEL moves the body');
+  const hz = (values) => { const core = makeCore(RATE); core.message({ set: { sweep1: 0, sweep2: 0, bpts: 0, ...values } }); core.message({ hit: 1 }); core.tick(); return core.hz; };
+  assert.ok(Math.abs(hz({ pitch1: 12, pitch2: 36, bmod: 60 }) - 65.406) < 0.01, 'PITCH between C1 and C3 is not C2');
 }
 
 console.log('engine: all tests pass');
