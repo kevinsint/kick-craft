@@ -55,6 +55,7 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .see { font-family: var(--mono); padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; border-style: dashed; border-color: var(--dev-edge); color: var(--dev-muted); }
 .see .line { width: 18px; border-top: 3px solid var(--c, currentColor); }
 .see .line.dash { border-top-style: dashed; }
+.see .line.dot { border-top-style: dotted; }
 .see[aria-pressed="true"] { background: #000; color: var(--c, var(--dev-text)); border-style: solid; border-color: var(--c, var(--dev-text)); }
 .see[aria-pressed="true"]::after { content: "\2713" / ""; }
 .presets { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: end; }
@@ -115,7 +116,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 25</p>
+      <p class="version">Draft 31</p>
     </div>
     <div class="device">
       <div class="row">
@@ -131,15 +132,17 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Tab</button>
           <button class="btn see" id="see-all" type="button" aria-pressed="true" style="--c:#b4bcc4"><span class="line"></span>ALL</button>
           <button class="btn see" id="see-body" type="button" aria-pressed="true" style="--c:#5adee6"><span class="line"></span>BODY</button>
+          <button class="btn see" id="see-texture" type="button" aria-pressed="false" style="--c:#b79cff"><span class="line dot"></span>TEXTURE</button>
           <button class="btn see" id="see-click" type="button" aria-pressed="false" style="--c:#ff8ad8"><span class="line"></span>CLICK</button>
           <button class="btn see" id="see-rumble" type="button" aria-pressed="false" style="--c:#8be36b"><span class="line"></span>RUMBLE</button>
+          <button class="btn see" id="see-lfo" type="button" aria-pressed="false" style="--c:#d7f06a"><span class="line dash"></span>LFO</button>
           <button class="btn see" id="see-pitch" type="button" aria-pressed="true" style="--c:#ffa400"><span class="line dash"></span>PITCH</button>
           <button class="btn see" id="see-head" type="button" aria-pressed="true">Playhead</button>
         </div>
       </div>
       <div class="wave">
         <div class="scope">
-          <canvas id="scope" role="img" tabindex="0" aria-label="One hit of the kick from silence. The buttons above choose the waves: all the layers in grey, the body in blue, the click in pink, the rumble in green, the pitch as an amber dashed line. A line moves over the picture while a hit plays, when Playhead is on. The Left and Right arrow keys move the point that is read." aria-describedby="status"></canvas>
+          <canvas id="scope" role="img" tabindex="0" aria-label="One hit of the kick from silence. The buttons above choose the waves: all the layers in grey, the body in blue, the texture as a violet dotted line, the click in pink, the rumble in green, the rumble’s LFO as a yellow-green line of long and short dashes with a line down the picture where each of its cycles starts, the pitch as an amber dashed line. A line moves over the picture while a hit plays, when Playhead is on. The Left and Right arrow keys move the point that is read." aria-describedby="status"></canvas>
           <canvas id="cursor" aria-hidden="true"></canvas>
         </div>
         <p class="readout"><span id="readout"></span> <span id="engine" role="status"></span></p>
@@ -147,12 +150,14 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
       </div>
       <div class="tabs" role="tablist" aria-label="The kick’s layers">
         <button class="tab" role="tab" type="button" id="tab-body" aria-controls="panel-body" aria-selected="true">BODY</button>
+        <button class="tab" role="tab" type="button" id="tab-texture" aria-controls="panel-texture" aria-selected="false" tabindex="-1">TEXTURE</button>
         <button class="tab" role="tab" type="button" id="tab-click" aria-controls="panel-click" aria-selected="false" tabindex="-1">CLICK</button>
         <button class="tab" role="tab" type="button" id="tab-rumble" aria-controls="panel-rumble" aria-selected="false" tabindex="-1">RUMBLE</button>
         <button class="tab" role="tab" type="button" id="tab-lfo" aria-controls="panel-lfo" aria-selected="false" tabindex="-1">LFO</button>
         <button class="tab" role="tab" type="button" id="tab-presets" aria-controls="panel-presets" aria-selected="false" tabindex="-1">PRESETS</button>
       </div>
       <div role="tabpanel" id="panel-body" aria-labelledby="tab-body"><div class="knobs" id="kick"></div></div>
+      <div role="tabpanel" id="panel-texture" aria-labelledby="tab-texture" hidden><div class="knobs" id="texture"></div></div>
       <div role="tabpanel" id="panel-click" aria-labelledby="tab-click" hidden><div class="knobs" id="click"></div></div>
       <div role="tabpanel" id="panel-rumble" aria-labelledby="tab-rumble" hidden><div class="knobs" id="rumble"></div></div>
       <div role="tabpanel" id="panel-lfo" aria-labelledby="tab-lfo" hidden>
@@ -176,7 +181,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             </span>
           </div>
           <p class="hint" id="preset-status" role="status"></p>
-          <p class="hint">A preset keeps every knob of BODY, CLICK, RUMBLE and LFO. Save with the name of a saved preset to replace it.</p>
+          <p class="hint">A preset keeps every knob of BODY, TEXTURE, CLICK, RUMBLE and LFO. Save with the name of a saved preset to replace it.</p>
         </div>
       </div>
     </div>
@@ -184,7 +189,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
 
   <section aria-labelledby="h-what">
     <h2 id="h-what">What it is</h2>
-    <p class="lede">A kick drum on OP6. It has three layers, and each one has its own attack. The body and the click are two oscillators of the same kind, with the controls of the Shakmat Battering Ram: a pitch, a sweep of the pitch, a decay. The click is the short one. The rumble comes up after each hit, as on the Ohmforce Bohm. Any LFO of the bank plays it.</p>
+    <p class="lede">A kick drum on OP6. It has three layers, and each one has its own attack. The body and the click are two oscillators of the same kind, with the controls of the Shakmat Battering Ram: a pitch, a sweep of the pitch, a decay. The click is the short one. The body has a second output, the texture: the body with noise, through a low-pass gate and a reverb. The rumble comes up after each hit, as on the Ohmforce Bohm. Any LFO of the bank plays it.</p>
     <p>This page plays the same algorithm in your browser, sample by sample. “Show” sets the length of the picture in milliseconds. The lines of the picture are parts of a bar at the TEMPO: they move with the tempo, and the wave does not. The <span class="mono">K</span> key hits the kick while a control of the instrument has the focus. It stays as a web app when the kick is in the FM-1.</p>
   </section>
 
@@ -232,15 +237,16 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <ol class="path">
       <li><span class="step">1. Trigger</span><span class="ctl">ALGORITHM: the LFO</span><span>The chosen LFO goes up through 1 V. The two oscillators start again at the same place, so each hit is the same. The hit before fades in 2 ms. The rumble does not start again: its tail goes on under the next hit.</span></li>
       <li><span class="step">2. Pitch envelope</span><span class="ctl">SWEEP, DEPTH, PITCH CURVE</span><span>The body’s pitch starts SWEEP octaves above the note and falls to it in the DEPTH time, with the shape of its PITCH CURVE.</span></li>
-      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 2.5 kHz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 320 ms.</span></li>
+      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 100 Hz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 50 ms.</span></li>
       <li><span class="step">4. Body oscillator</span><span class="ctl">SELECT: the note, PHASE</span><span>A sine at the note plus the pitch envelope. PHASE is where in its cycle it starts, 0 to 357 degrees: at 0 it starts soft, at 90 with a hard edge, at 180 it goes down first. In FM mode the click bends it; in RING mode the click multiplies it.</span></li>
       <li><span class="step">5. Noise</span><span class="ctl">NOISE, TONE</span><span>A burst of 15 ms at the hit, through a low-pass filter. It is part of the click, but the click’s ATTACK does not move it.</span></li>
       <li><span class="step">6. Body level</span><span class="ctl">ATTACK, ATK CURVE, DECAY</span><span>The DECAY starts at the hit and does not move. The ATTACK only cuts the start of the body, for 1 ms to 400 ms, so the click has the room; after that time the wave is the same as with no attack. ATK CURVE is the shape of the cut: the body stays low and comes up at the end (127), a straight line (42), or up at once (0).</span></li>
       <li><span class="step">7. Drive</span><span class="ctl">DRIVE, FOLD, CLIP or CRUSH</span><span>After the envelope: the tail gets cleaner as it falls. In MIX mode the click and the noise go round it, so a loud body does not flatten them. In FM and RING the click is inside the body and takes the drive.</span></li>
       <li><span class="step">8. Low cut</span><span class="ctl">HPF</span><span>30 Hz, 3rd order.</span></li>
-      <li><span class="step">9. Three levels, then the mix</span><span class="ctl">LEVEL of each layer</span><span>The body, the click and the rumble each have a LEVEL. No level moves another layer: with the body at 0 you hear the click and the rumble alone. Then the sum, in the centre, before the compressor.</span></li>
-      <li><span class="step">10. Rumble</span><span class="ctl">LEVEL, ATTACK, DELAY, REVERB, SIZE, LENGTH, DARK, GRIT, PHASE, LFO</span><span>The kick after its drive, before the body’s LEVEL, goes into four short echoes that feed themselves (a small reverb), then a low-pass at DARK and a drive of its own. Each hit pushes it down, and it comes up again in its ATTACK time, 5 ms to 1 s. PHASE makes it later by up to one cycle of the body’s note, so its lows add to the body or take from it. SIZE is the time the echoes take to fall to nothing, 150 ms to 2.4 s. It is not on the clock, so the tempo does not change the rumble’s tone. LENGTH is where the rumble closes after a hit, as a part of a bar at the tempo: 1/16, 1/8, 1/4, 1/2, 1 bar, 2 bars or 4 bars. It closes a gate and nothing else, so the rumble stops on the clock. A new hit starts the count again. DELAY puts repeats of the kick before the echoes: DLY TIME, a part of a bar at the tempo from 1/64 to 1/2, with triplets (T) and dotted values (D), and DLY BACK, how long they go on. REVERB at 0 takes the echoes out, so the low-pass has the kick and its repeats only. An LFO moves the rumble’s LEVEL (down to silence) and its DARK (up to 2 octaves each way); one cycle of it is 4 bars to 1/32 of a bar.</span></li>
-      <li><span class="step">11. Duck</span><span class="ctl">DUCK</span><span>The body’s level envelope, upside down, lowers OP1 to OP3.</span></li>
+      <li><span class="step">9. Texture</span><span class="ctl">LEVEL, ATTACK, DECAY, DCY CURVE, OPEN, NOISE, REVERB, SIZE, LOW CUT, HIGH CUT</span><span>The body’s second output. The body after its drive and its low cut, before its LEVEL, gets NOISE and goes into a low-pass gate: one envelope that is a low-pass filter and a level at the same time, as a vactrol gate. At the hit the gate opens to OPEN, 100 Hz to 12.8 kHz, after its ATTACK, 0 to 200 ms. Then it closes in DECAY, 20 ms to 2 s: the highs go first, then the level. DCY CURVE is the shape of the way down: fast at the start, then slowly (0), a straight line (42), or open for most of the time and down at the end (127). At each curve the gate is closed at the end of DECAY. REVERB adds a tail to what comes out of the gate, and SIZE is the time the tail takes to fall to nothing, 100 ms to 3.2 s. Two filters end the texture, after the reverb: LOW CUT takes out what is below it, 20 Hz to 2 kHz, and HIGH CUT takes out what is above it, 200 Hz to 16 kHz. Each is off at the end of its knob. The body itself, the raw output, does not change.</span></li>
+      <li><span class="step">10. Four levels, then the mix</span><span class="ctl">LEVEL of each layer</span><span>The body, the texture, the click and the rumble each have a LEVEL. No level moves another layer: with the body at 0 you hear the texture, the click and the rumble alone. Then the sum, in the centre, before the compressor.</span></li>
+      <li><span class="step">11. Rumble</span><span class="ctl">LEVEL, ATTACK, DELAY, REVERB, SIZE, LENGTH, DARK, GRIT, PHASE, LFO</span><span>The kick after its drive, before the body’s LEVEL, goes into four short echoes that feed themselves (a small reverb), then a low-pass at DARK and a drive of its own. Each hit pushes it down, and it comes up again in its ATTACK time, 5 ms to 1 s. PHASE makes it later by up to one cycle of the body’s note, so its lows add to the body or take from it. SIZE is the time the echoes take to fall to nothing, 150 ms to 2.4 s. It is not on the clock, so the tempo does not change the rumble’s tone. LENGTH is where the rumble closes after a hit, as a part of a bar at the tempo: 1/16, 1/8, 1/4, 1/2, 1 bar, 2 bars or 4 bars. It closes a gate and nothing else, so the rumble stops on the clock. A new hit starts the count again. DELAY puts repeats of the kick before the echoes: DLY TIME, a part of a bar at the tempo from 1/64 to 1/2, with triplets (T) and dotted values (D), and DLY BACK, how long they go on. REVERB at 0 takes the echoes out, so the low-pass has the kick and its repeats only. An LFO moves the rumble’s LEVEL (down to silence) and its DARK (up to 2 octaves each way); LFO PER BAR is the number of its cycles in one bar at the tempo, from 1/4 (one cycle in 4 bars) to 32, with 3, 5, 6 and 7. LFO PHASE is where in its cycle it starts, 0 to 357 degrees. The LFO wave button shows its wave in the picture, with a line where each cycle starts.</span></li>
+      <li><span class="step">12. Duck</span><span class="ctl">DUCK</span><span>The body’s level envelope, upside down, lowers OP1 to OP3.</span></li>
     </ol>
     <h3>The trigger: 1 V, going up</h3>
     <ul class="plain">
@@ -256,7 +262,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <h2 id="h-panel">The controls on the FM-1</h2>
     <p>OP6 becomes the kick’s key. A short press turns the kick on or off. Hold it 1 second to select it: the page is then the kick’s page, as for OP1 to OP3.</p>
     <p>On this page K1 to K4 are KNOB1 to KNOB4, and ALGO is ALGORITHM.</p>
-    <p>The kick has three sets of knobs, as the LFO page has: the white keys 13, 14 and 15 choose BODY, CLICK or RUMBLE. The white keys 1 to 12 hit the kick by hand.</p>
+    <p>The kick has three sets of knobs, as the LFO page has: the white keys 13, 14 and 15 choose BODY, CLICK or RUMBLE. The white keys 1 to 12 hit the kick by hand. The TEXTURE has no key and no knobs on the FM-1 yet: its controls on this page show NOT ON FM-1 YET where the others show their knob.</p>
     <table>
       <thead><tr><th>Control</th><th>Alone</th><th>With OCT- held</th></tr></thead>
       <tbody>
@@ -292,12 +298,13 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <div class="choice"><strong>The sound engine runs sample by sample.</strong><span>The browser plays the kick in its audio thread, at twice the sample rate, then filters it down, so the drive and the click make less false tone. The hits of the LFO land on the exact sample. A knob changes the sound while it plays.</span></div>
     <div class="choice"><strong>The picture is the engine’s own output.</strong><span>The playhead shows where the sound is in the picture, from the audio clock. The picture is one hit from silence, so with the LFO on, the tail of the hit before is in the sound and not in the picture. The wave is one hit from silence, computed at 96 000 samples a second by the same code that makes the sound. Below one sample a pixel, each sample has its dot.</span></div>
     <div class="choice"><strong>Three volumes, and KNOB1 is the volume in each set.</strong><span>The body’s LEVEL at 0 leaves the click and the rumble as they are. The click’s LEVEL also moves its noise. In FM and RING the click is inside the body: its LEVEL is then how much it bends or multiplies the body, and a silent body silences it.</span></div>
+    <div class="choice"><strong>The texture is beside the body, not in its place.</strong><span>The body has two outputs: the raw one, as before, and the texture. Each has its LEVEL. The rumble takes the raw body and the click, not the texture. The noise goes into the gate, so the gate shapes it with the body. The texture’s reverb is its own: it is brighter than the rumble’s. The texture’s knobs have no place on the FM-1 yet. A preset saved before the texture loads with the texture’s LEVEL at 0, so it sounds as it did.</span></div>
     <div class="choice"><strong>The kick is not a style.</strong><span>It is a fourth voice with its own small engine, not a patch of blocks. It costs two sines, four envelopes, a noise and the rumble’s four echoes, less than a voice.</span></div>
     <div class="choice"><strong>The wave and the curves are mine.</strong><span>The manual does not give them. I use a sine and curves that fall fast, then slowly, which is the common way to make this kind of kick. The ranges in the table above are a first estimate, to tune by ear on this page.</span></div>
     <div class="choice"><strong>The drive is after the level envelope.</strong><span>The manual does not say where it is. After the envelope, the drive acts as a compressor on the start of the hit, which is what the manual describes.</span></div>
     <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
     <div class="choice"><strong>The rumble’s attack is its own.</strong><span>Before, the rumble came up as the body went down. Now a long body can have a fast rumble, and a short body a slow one.</span></div>
-    <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a part of a bar at the tempo, it has three shapes, and it starts its cycle when you start the LFO of the trigger. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
+    <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a number of cycles in a bar at the tempo, it has three shapes and a phase, and it starts its cycle when you start the LFO of the trigger. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
     <div class="choice"><strong>The delay and the reverb are the rumble’s own.</strong><span>They are not the DR1’s delay and reverb, and the body and the click do not go to the output through them. The delay needs memory in the firmware: half a bar at 40 BPM is 3 s, about 16 500 samples at one eighth of the sample rate.</span></div>
     <div class="choice"><strong>The rumble is cheap.</strong><span>It is below 400 Hz, so the firmware can run it at one eighth of the sample rate: four echoes of about 300 samples each.</span></div>
     <div class="choice"><strong>The rumble takes the kick, not the drones.</strong><span>The drones have the DR1’s delay and reverb. A send from the drones into the rumble is possible later.</span></div>
@@ -322,14 +329,21 @@ function kickTimes() {
     clickAttack: function (v) { return v ? 0.0002 * Math.pow(2, v / 127 * 8) : 0; },        /* the click: at once, or 0.2 ms .. 51 ms */
     rumbleAttack: function (v) { return 0.005 * Math.pow(2, v / 127 * 7.64); },             /* the rumble: 5 ms .. 1 s to come back up */
     depth: function (v) { return 0.004 * Math.pow(2, v / 127 * 5.5); },                     /* 4 ms .. 180 ms for the pitch to fall to the note */
-    snap: function (v) { return 0.005 * Math.pow(2, v / 127 * 6); },                        /* 5 ms .. 320 ms for the click to fall to nothing */
+    snap: function (v) { return 0.005 * Math.pow(10, v / 127); },                           /* 5 ms .. 50 ms for the click to fall to nothing */
     tone: function (v) { return 400 * Math.pow(2, v / 127 * 5); },                          /* the noise's low-pass: 400 Hz .. 12.8 kHz */
-    tune: function (v) { return 40 * Math.pow(2, v / 127 * 6); },                           /* the click's note: 40 Hz .. 2.56 kHz */
+    tune: function (v) { return 40 * Math.pow(2.5, v / 127); },                             /* the click's note: 40 Hz .. 100 Hz */
+    textureAttack: function (v) { return v ? 0.001 * Math.pow(2, v / 127 * 7.64) : 0; },    /* the texture's gate: at once, or 1 ms .. 200 ms */
+    textureDecay: function (v) { return 0.02 * Math.pow(2, v / 127 * 6.64); },              /* 20 ms .. 2 s for the gate to close */
+    textureOpen: function (v) { return 100 * Math.pow(2, v / 127 * 7); },                   /* the gate's low-pass when it is full open: 100 Hz .. 12.8 kHz */
+    textureLow: function (v) { return 20 * Math.pow(2, v / 127 * 6.64); },                   /* the texture's LOW CUT: 20 Hz .. 2 kHz, off at 0 */
+    textureHigh: function (v) { return 200 * Math.pow(2, v / 127 * 6.32); },                 /* the texture's HIGH CUT: 200 Hz .. 16 kHz, off at 127 */
+    textureSize: function (v) { return 0.1 * Math.pow(2, v / 127 * 5); },                   /* 100 ms .. 3.2 s for the texture's reverb to fall to nothing */
     lengths: [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4],                                        /* the rumble's LENGTH, in bars of 4 beats */
     length: function (index, bpm) { return this.lengths[index] * 240 / bpm; },              /* ... and in seconds at a tempo */
     size: function (v) { return 0.15 * Math.pow(2, v / 127 * 4); },                         /* the rumble's SIZE: 150 ms .. 2.4 s for the reverb to fall to nothing, not on the clock */
     dark: function (v) { return 50 * Math.pow(2, v / 127 * 3); },                           /* the rumble's low-pass: 50 .. 400 Hz */
-    lfoBars: [4, 2, 1, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32],                                /* the rumble's LFO: one cycle, in bars */
+    lfoBars: [4, 2, 1, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32],                                /* the rumble's LFO before LFO PER BAR: one cycle, in bars. For the old presets */
+    lfoPerBar: [1 / 4, 1 / 2, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32],                      /* the rumble's LFO: its cycles in one bar */
     delayBars: [1 / 64, 1 / 32, 1 / 24, 1 / 16, 1 / 12, 3 / 32, 1 / 8, 1 / 6, 3 / 16, 1 / 4, 1 / 2]      /* the rumble's DELAY, in bars: T is a triplet, D is dotted */                            /* the rumble's low-pass: 50 .. 400 Hz */
   };
 }
@@ -340,20 +354,26 @@ function makeCore(rate) {
   var ECHO = [0.0297, 0.0371, 0.0411, 0.0533];      /* the rumble's four echoes, in seconds: no two in a simple ratio */
   var p = { pitch: 24, decay: 64, depth: 56, sweep: 36, drive: 30, level: 100, curve: 96, phase: 0, type: 0, attack: 0, acurve: 100, hpf: 1,
             click: 71, bend: 76, tune: 48, snap: 64, cattack: 0, ccurve: 96, noise: 42, tone: 80, mode: 0,
-            rumble: 55, rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, duck: 80, reverb: 127, size: 55, delay: 0, ddiv: 3, dfbk: 50, ldiv: 3, lshape: 0, llevel: 0, ldark: 0, bpm: 120, steps: 16, trigs: 4, shift: 0 };
+            rumble: 55, rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, duck: 80, reverb: 127, size: 55, delay: 0, ddiv: 3, dfbk: 50, lper: 3, lphase: 0, lshape: 0, llevel: 0, ldark: 0, bpm: 120, steps: 16, trigs: 4, shift: 0,
+            tex: 64, tattack: 0, tdecay: 64, tcurve: 0, topen: 90, tnoise: 50, trev: 40, tsize: 64, tlow: 0, thigh: 127 };
   var d = {}, k;
   var lines = ECHO.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), at = [0, 0, 0, 0], damp = [0, 0, 0, 0], back = [0, 0, 0, 0];
   var late = new Float32Array(Math.ceil(rate / 16) + 2), lateAt = 0;      /* the rumble's PHASE: up to one cycle of C0 */
   var dark1 = 0, dark2 = 0, rumbleGain = 1, rumbleN = -1;
   var echo = new Float32Array(Math.ceil(rate * 3) + 2), echoAt = 0;      /* the rumble's DELAY: up to half a bar at 40 BPM, 3 s */
   var ctl = 0, lfoPhase = 0, lfoGain = 1, lfoGainTo = 1, darkNow = 0, darkTo = -1;      /* the rumble's LFO, worked out each 32 samples */
+  /* the texture: the body's second output, through a low-pass gate, then a reverb of four echoes and two short all-pass loops */
+  var TEX_ECHO = [0.0253, 0.0269, 0.0290, 0.0307], TEX_PASS = [0.005, 0.0017];
+  var texLines = TEX_ECHO.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), texAt = [0, 0, 0, 0], texDamp = [0, 0, 0, 0], texBack = [0, 0, 0, 0];
+  var passLines = TEX_PASS.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), passAt = [0, 0];
+  var texGate = 0, tex1 = 0, tex2 = 0, cutLow1 = 0, cutLow2 = 0, cutHigh1 = 0, cutHigh2 = 0;      /* ... and the two filters at its end */
   var hpY = new Float64Array(9), hpX = new Float64Array(9);              /* three chains (body, click, click alone) of three low cuts */
   var cur = null, old = null, fadeStep = 1 / (0.002 * rate), smooth = 1 - Math.exp(-1 / (0.0015 * rate));
   var noiseEvery = Math.max(1, Math.round(rate / 48000)), dampKeep = Math.pow(0.35, 48000 / rate);
   var solo = 'all', running = false, stepCount = 0, untilStep = 0;
   var droneOn = false, droneGain = 0, saw = [0, 0.37, 0.71], SAW_HZ = [110, 110.7, 164.6], droneLow1 = 0, droneLow2 = 0, droneKeep = Math.exp(-TWO_PI * 700 / rate);
-  var vb = 0, vt = 0, vs = 0, vl = 0, vh = 0, vh2 = 0;                  /* one voice's sample: body, click and noise, click alone, level, the two pitches */
-  var self = { out: 0, all: 0, body: 0, click: 0, rumble: 0, hz: 0, hz2: 0, step: -1, hits: 0 };
+  var vb = 0, vt = 0, vs = 0, vl = 0, vh = 0, vh2 = 0, vn = 0, vg = 0;      /* one voice's sample: body, click and noise, click alone, level, the two pitches, the texture's noise and its gate */
+  var self = { out: 0, all: 0, body: 0, click: 0, rumble: 0, texture: 0, lfo: 0, hz: 0, hz2: 0, step: -1, hits: 0 };
 
   function set(values) {
     for (var name in values) p[name] = values[name];
@@ -366,11 +386,17 @@ function makeCore(rate) {
     d.clickAttack = T.clickAttack(p.cattack); d.clickOct = p.bend / 127 * 5; d.clickSnap = p.ccurve / 127;
     d.noiseLevel = p.noise / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(p.tone) / (rate / noiseEvery));
     d.hpKeep = 1 - TWO_PI * 30 / rate;
-    d.life = Math.floor(rate * (Math.max(d.attack + 3 * T.decay(p.decay), d.clickAttack + 3 * d.clickTime) + 0.05));
+    d.texLevel = p.tex / 127; d.texAttack = T.textureAttack(p.tattack); d.texDecay = T.textureDecay(p.tdecay); d.texBend = 5 - p.tcurve / 127 * 15; d.texOpen = T.textureOpen(p.topen) / 30;
+    d.texNoise = p.tnoise / 127 * 3; d.texReverb = p.trev / 127;
+    d.cutLowKeep = Math.exp(-TWO_PI * T.textureLow(p.tlow) / rate); d.cutHighKeep = Math.exp(-TWO_PI * T.textureHigh(p.thigh) / rate);
+    for (k = 0; k < 4; k++) texBack[k] = Math.pow(0.001, TEX_ECHO[k] / T.textureSize(p.tsize));
+    if (!p.tex) { for (k = 0; k < 4; k++) { texLines[k].fill(0); texDamp[k] = 0; } passLines[0].fill(0); passLines[1].fill(0); texGate = tex1 = tex2 = cutLow1 = cutLow2 = cutHigh1 = cutHigh2 = 0; }
+    /* a voice lives as long as its longest part: the texture's noise goes on until its gate is closed */
+    d.life = Math.floor(rate * (Math.max(d.attack + 3 * T.decay(p.decay), d.clickAttack + 3 * d.clickTime, p.tex ? d.texDecay : 0) + 0.05));
     d.length = T.length(p.rlen, p.bpm);      /* LENGTH, a part of a bar at the tempo, only closes the gate */
     for (k = 0; k < 4; k++) back[k] = Math.pow(0.001, ECHO[k] / T.size(p.size));      /* each echo's way back: -60 dB after SIZE. Not from LENGTH: the tempo must not change the rumble's tone */
     d.darkHz = T.dark(p.dark); d.darkKeep = Math.exp(-TWO_PI * d.darkHz / rate);
-    d.lfoStep = 32 / (T.lfoBars[p.ldiv] * 240 / p.bpm * rate); d.lfoLevel = p.llevel / 127; d.lfoDark = p.ldark / 127;
+    d.lfoStep = 32 * T.lfoPerBar[p.lper] / (240 / p.bpm * rate); d.lfoFrom = p.lphase / 128; d.lfoLevel = p.llevel / 127; d.lfoDark = p.ldark / 127;
     d.reverb = p.reverb / 127; d.echoN = Math.max(1, Math.min(echo.length - 1, Math.floor(T.delayBars[p.ddiv] * 240 / p.bpm * rate))); d.echoMix = p.delay / 127; d.echoBack = p.dfbk / 127 * 0.9;
     if (darkTo < 0) darkNow = darkTo = d.darkKeep; d.grit = 1 + p.grit / 127 * 11;
     d.rumbleAttack = T.rumbleAttack(p.rattack);
@@ -381,7 +407,7 @@ function makeCore(rate) {
   }
   function hit() {
     if (cur) { old = cur; old.fade = 1; }       /* the hit before fades in 2 ms: no step in the wave */
-    cur = { n: 0, phase: p.phase / 128, phase2: 0, noise: 0, white: 0, seed: 22222, held: 0, fade: 1 };
+    cur = { n: 0, phase: p.phase / 128, phase2: 0, noise: 0, white: 0, seed: 22222, grain: 0, seed2: 77777, held: 0, fade: 1 };
     rumbleN = 0; self.hits++;
   }
   function trig(step) { var steps = p.steps, trigs = Math.min(steps, p.trigs); return (((step - p.shift) % steps + steps) % steps) * trigs % steps < trigs; }
@@ -410,6 +436,7 @@ function makeCore(rate) {
     if (v.n % noiseEvery === 0) {
       v.seed = (v.seed * 1664525 + 1013904223) >>> 0; v.white = v.seed / 2147483648 - 1;
       v.noise = d.noiseKeep * v.noise + (1 - d.noiseKeep) * v.white;
+      v.seed2 = (v.seed2 * 1664525 + 1013904223) >>> 0; v.grain = v.seed2 / 2147483648 - 1;      /* the texture's noise: its own, the same at each hit */
     }
     x = body * level;
     if (p.type === 0) driven = fold(Math.tanh(x * (1 + 4 * d.bend)) * (1 + 2 * d.bend));      /* a soft top first (it compresses), then the fold */
@@ -420,6 +447,7 @@ function makeCore(rate) {
     vt = (p.mode === 0 ? click * 1.4 : 0) + v.noise * d.noiseLevel * Math.exp(-t / 0.003);
     vs = vt + (p.mode === 0 ? 0 : click * 1.4);      /* in FM and RING the click is inside the body: alone, it is its oscillator as it is */
     vl = level; vh = hz; vh2 = hz2;
+    vn = v.grain; vg = t < d.texDecay ? (1 - bent(t / d.texDecay, d.texBend)) * (t < d.texAttack ? rise(t, d.texAttack) : 1) : 0;      /* the gate: its DECAY runs from the hit with the shape of its curve, its ATTACK cuts the start */
     v.n++;
   }
   function lowCut(chain, x) {
@@ -429,25 +457,26 @@ function makeCore(rate) {
   }
 
   function tick() {
-    var b = 0, c = 0, cs = 0, level = 0, r = 0, lv = p.level / 127, sum, was, kick, heard, droneOut = 0;
+    var b = 0, c = 0, cs = 0, level = 0, r = 0, grain = 0, gate = 0, x = 0, lv = p.level / 127, sum, was, kick, heard, droneOut = 0;
     if (running) {      /* the LFO: a gate, 4 steps a beat, with the bank's Euclidean pattern */
       if (untilStep <= 0) { self.step = stepCount % p.steps; if (trig(self.step)) hit(); stepCount++; untilStep += d.stepLen; }
       untilStep--;
     }
     if (old) {
       voice(old); old.fade -= fadeStep;
-      if (old.fade <= 0) old = null; else { b = vb * old.fade; c = vt * old.fade; cs = vs * old.fade; }
+      if (old.fade <= 0) old = null; else { b = vb * old.fade; c = vt * old.fade; cs = vs * old.fade; grain = vn * old.fade; }
     }
     if (cur) {
-      voice(cur); b += vb; c += vt; cs += vs; level = vl; self.hz = vh; self.hz2 = vh2;
+      voice(cur); b += vb; c += vt; cs += vs; grain += vn; gate = vg; level = vl; self.hz = vh; self.hz2 = vh2;
       if (cur.n > d.life) cur = null;
     }
     b = lowCut(0, b); c = lowCut(1, c); cs = lowCut(2, cs);
     kick = b + c;
     if (p.rumble) {             /* the rumble: four echoes that feed themselves, dark, driven, down at the hit and up again in its own ATTACK */
       if ((ctl++ & 31) === 0) {      /* the LFO: its place in the cycle, then what it does to the level and to the low-pass */
-        lfoPhase += d.lfoStep; lfoPhase -= Math.floor(lfoPhase);
-        var wave = p.lshape === 0 ? Math.sin(TWO_PI * lfoPhase) : p.lshape === 1 ? 1 - 4 * Math.abs(lfoPhase - 0.5) : lfoPhase < 0.5 ? 1 : -1;
+        var place = lfoPhase + d.lfoFrom; place -= Math.floor(place);      /* LFO PHASE: where in its cycle the LFO is when the trigger's LFO starts */
+        var wave = p.lshape === 0 ? Math.sin(TWO_PI * place) : p.lshape === 1 ? 1 - 4 * Math.abs(place - 0.5) : place < 0.5 ? 1 : -1;
+        self.lfo = wave; lfoPhase += d.lfoStep; lfoPhase -= Math.floor(lfoPhase);
         lfoGainTo = 1 - d.lfoLevel * (0.5 - 0.5 * wave);      /* LFO LEVEL: from full level down, to silence at 127 */
         darkTo = d.lfoDark ? Math.exp(-TWO_PI * Math.min(2000, Math.max(20, d.darkHz * Math.pow(2, wave * d.lfoDark * 2))) / rate) : d.darkKeep;      /* LFO DARK: up to 2 octaves each way */
       }
@@ -476,10 +505,32 @@ function makeCore(rate) {
       r = late[(lateAt - d.late + late.length) % late.length];
       lateAt = lateAt + 1 === late.length ? 0 : lateAt + 1;
     }
-    /* three volumes: the body's LEVEL is after the rumble's input, so a silent body still feeds the rumble */
-    self.body = Math.tanh(b * lv * 0.7); self.click = Math.tanh(cs * 0.7); self.rumble = r;
-    self.all = Math.tanh((b * lv + c) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
-    heard = solo === 'body' ? self.body : solo === 'click' ? self.click : solo === 'rumble' ? r : self.all;
+    if (p.tex) {      /* the texture: the body before its LEVEL, with noise, through a gate that is a low-pass and a level in one, then its reverb */
+      texGate += (gate - texGate) * smooth;      /* the gate moves as a vactrol does: not in one sample */
+      var texKeep = Math.exp(-TWO_PI * 30 * Math.pow(d.texOpen, texGate) / rate), texIn = b + grain * d.texNoise, gated;      /* closed: 30 Hz. Open: OPEN */
+      tex1 = texIn + texKeep * (tex1 - texIn); tex2 = tex1 + texKeep * (tex2 - tex1);
+      gated = tex2 * texGate; sum = 0;
+      for (k = 0; k < 4; k++) {
+        was = texLines[k][texAt[k]];
+        texDamp[k] = was + dampKeep * (texDamp[k] - was);
+        texLines[k][texAt[k]] = gated * 0.25 + texDamp[k] * texBack[k];
+        texAt[k] = texAt[k] + 1 === texLines[k].length ? 0 : texAt[k] + 1;
+        sum += k & 1 ? -was : was;      /* one echo in two upside down: the lows of the body do not pile up in the tail */
+      }
+      for (k = 0; k < 2; k++) {      /* the two short loops make the echoes dense */
+        was = passLines[k][passAt[k]];
+        passLines[k][passAt[k]] = sum + was * 0.5; sum = was - (sum + was * 0.5) * 0.5;
+        passAt[k] = passAt[k] + 1 === passLines[k].length ? 0 : passAt[k] + 1;
+      }
+      x = gated + sum * d.texReverb;
+      if (p.tlow) { cutLow1 = x + d.cutLowKeep * (cutLow1 - x); x -= cutLow1; cutLow2 = x + d.cutLowKeep * (cutLow2 - x); x -= cutLow2; }      /* LOW CUT, then HIGH CUT: on the gate's sound and its tail together */
+      if (p.thigh < 127) { cutHigh1 = x + d.cutHighKeep * (cutHigh1 - x); cutHigh2 = cutHigh1 + d.cutHighKeep * (cutHigh2 - cutHigh1); x = cutHigh2; }
+      x *= d.texLevel;
+    }
+    /* four volumes: the body's LEVEL is after the inputs of the rumble and of the texture, so a silent body still feeds them */
+    self.body = Math.tanh(b * lv * 0.7); self.click = Math.tanh(cs * 0.7); self.rumble = r; self.texture = Math.tanh(x * 0.7);
+    self.all = Math.tanh((b * lv + c + x) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
+    heard = solo === 'body' ? self.body : solo === 'click' ? self.click : solo === 'rumble' ? r : solo === 'texture' ? self.texture : self.all;
     droneGain += ((droneOn ? 0.16 : 0) - droneGain) * smooth * 0.1;
     if (droneGain > 0.00001) {      /* a drone under the kick, to hear DUCK: three saws through a low-pass */
       for (k = 0; k < 3; k++) {
@@ -553,6 +604,18 @@ function makeKickEngine(outRate) {
     { id: 'phase', name: 'PHASE', where: 'OCT-K3', min: 0, max: 127, value: 0, text: degrees },
     { id: 'hpf', name: 'HPF', where: 'OCT+', options: ['OFF', 'ON'], value: 1 }
   ];
+  var TEXTURE = [
+    { id: 'tex', name: 'LEVEL', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: plain },
+    { id: 'tattack', name: 'ATTACK', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: function (v) { return ms(T.textureAttack(v)); } },
+    { id: 'tdecay', name: 'DECAY', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: function (v) { return ms(T.textureDecay(v)); } },
+    { id: 'tcurve', name: 'DCY CURVE', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: plain },
+    { id: 'topen', name: 'OPEN', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 90, text: function (v) { return Math.round(T.textureOpen(v)) + ' Hz'; } },
+    { id: 'tnoise', name: 'NOISE', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 50, text: plain },
+    { id: 'trev', name: 'REVERB', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 40, text: plain },
+    { id: 'tsize', name: 'SIZE', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: function (v) { return ms(T.textureSize(v)); } },
+    { id: 'tlow', name: 'LOW CUT', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: function (v) { return v ? Math.round(T.textureLow(v)) + ' Hz' : 'OFF'; } },
+    { id: 'thigh', name: 'HIGH CUT', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 127, text: function (v) { return v < 127 ? Math.round(T.textureHigh(v)) + ' Hz' : 'OFF'; } }
+  ];
   var CLICK = [
     { id: 'click', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 71, text: plain },
     { id: 'cattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 0, text: function (v) { return ms(T.clickAttack(v)); } },
@@ -576,7 +639,8 @@ function makeKickEngine(outRate) {
     { id: 'delay', name: 'DELAY', where: 'OCT+K2', min: 0, max: 127, value: 0, text: plain },
     { id: 'ddiv', name: 'DLY TIME', where: 'OCT+K3', options: ['1/64', '1/32', '1/16T', '1/16', '1/8T', '1/16D', '1/8', '1/4T', '1/8D', '1/4', '1/2'], value: 3 },
     { id: 'dfbk', name: 'DLY BACK', where: 'OCT+K4', min: 0, max: 127, value: 50, text: plain },
-    { id: 'ldiv', name: 'LFO RATE', where: 'BANK', options: ['4 BARS', '2 BARS', '1 BAR', '1/2', '1/4', '1/8', '1/16', '1/32'], value: 3 },
+    { id: 'lper', name: 'LFO PER BAR', where: 'BANK', options: ['1/4', '1/2', '1', '2', '3', '4', '5', '6', '7', '8', '12', '16', '24', '32'], value: 3 },
+    { id: 'lphase', name: 'LFO PHASE', where: 'BANK', min: 0, max: 127, value: 0, text: degrees },
     { id: 'lshape', name: 'LFO SHAPE', where: 'BANK', options: ['SINE', 'TRIANGLE', 'SQUARE'], value: 0 },
     { id: 'llevel', name: 'LFO LEVEL', where: 'LFO+K1', min: 0, max: 127, value: 0, text: plain },
     { id: 'ldark', name: 'LFO DARK', where: 'LFO+K3', min: 0, max: 127, value: 0, text: plain },
@@ -590,7 +654,7 @@ function makeKickEngine(outRate) {
   ];
   var value = {}, controls = {}, tab = 'body', soloOn = false;
   function copy() { var o = {}; for (var k in value) o[k] = value[k]; return o; }
-  function isLayer(name) { return name === 'body' || name === 'click' || name === 'rumble'; }
+  function isLayer(name) { return name === 'body' || name === 'texture' || name === 'click' || name === 'rumble'; }
   function soloLayer() { return soloOn && isLayer(tab) ? tab : 'all'; }
 
   /* ---- the sound: the engine in the browser's audio thread; in the page's own thread when the browser refuses that ---- */
@@ -637,11 +701,11 @@ function makeKickEngine(outRate) {
   var RATE = 96000, span = 0.5, shot = null, drawDue = false;
   var scope = document.getElementById('scope'), sc = scope.getContext('2d'), cursor = document.getElementById('cursor'), cc = cursor.getContext('2d');
   var GREY = '#b4bcc4', BLUE = '#5adee6', AMBER = '#ffa400', GRID = '#33383e', GRID_STRONG = '#59616a', TEXT = '#c9d0d6';
-  var PINK = '#ff8ad8', GREEN = '#8be36b', WAVES = ['all', 'body', 'click', 'rumble', 'pitch'];
-  var follow = true, byHand = { all: true, body: true, click: true, rumble: true, pitch: true };
+  var PINK = '#ff8ad8', GREEN = '#8be36b', VIOLET = '#b79cff', LIME = '#d7f06a', WAVES = ['all', 'body', 'texture', 'click', 'rumble', 'lfo', 'pitch'];
+  var follow = true, byHand = { all: true, body: true, texture: true, click: true, rumble: true, lfo: true, pitch: true };
   function see() {
     if (!follow) return byHand;
-    return { all: true, body: tab === 'body', click: tab === 'click', rumble: tab === 'rumble', pitch: tab !== 'rumble' };
+    return { all: true, body: tab === 'body', texture: tab === 'texture', click: tab === 'click', rumble: tab === 'rumble', lfo: tab === 'rumble', pitch: tab !== 'rumble' && tab !== 'texture' };
   }
   function pitchOf() { var now = see(); return now.click && !now.body ? 'click' : 'body'; }      /* the click's pitch when the click shows without the body */
   function showSees() {
@@ -660,11 +724,11 @@ function makeKickEngine(outRate) {
   function setSpan() { span = Number(document.getElementById('span').value); }
   function render() {
     var count = Math.floor(span * RATE), core = makeCore(RATE), i;
-    var made = { count: count, all: new Float32Array(count), body: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count), hz: new Float32Array(count), hz2: new Float32Array(count) };
+    var made = { count: count, all: new Float32Array(count), body: new Float32Array(count), texture: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count), lfo: new Float32Array(count), hz: new Float32Array(count), hz2: new Float32Array(count) };
     core.message({ set: copy() }); core.message({ hit: 1 });
     for (i = 0; i < count; i++) {
       core.tick();
-      made.all[i] = core.all; made.body[i] = core.body; made.click[i] = core.click; made.rumble[i] = core.rumble; made.hz[i] = core.hz; made.hz2[i] = core.hz2;
+      made.all[i] = core.all; made.body[i] = core.body; made.texture[i] = core.texture; made.click[i] = core.click; made.rumble[i] = core.rumble; made.lfo[i] = core.lfo; made.hz[i] = core.hz; made.hz2[i] = core.hz2;
     }
     shot = made;
   }
@@ -699,8 +763,9 @@ function makeKickEngine(outRate) {
       x = Math.round(s * part * bar / span * w) + 0.5; sc.strokeStyle = s % 2 ? GRID : GRID_STRONG;
       sc.beginPath(); sc.moveTo(x, f.top); sc.lineTo(x, f.bottom); sc.stroke();
     }
-    function trace(a, colour, width) {
-      sc.strokeStyle = colour; sc.fillStyle = colour; sc.lineWidth = width * f.ratio; sc.lineJoin = 'round'; sc.beginPath();
+    function trace(a, colour, width, dotted) {      /* dotted: 4 pixels on, 3 off, so two waves are not told apart by their colour alone */
+      var dot = Math.max(1, Math.round(f.ratio));
+      sc.strokeStyle = colour; sc.fillStyle = colour; sc.lineWidth = width * f.ratio; sc.lineJoin = 'round'; sc.setLineDash(dotted ? [4 * dot, 3 * dot] : []); sc.beginPath();
       if (count <= w) {
         for (i = 0; i < count; i++) { x = i / count * w; if (i) sc.lineTo(x, Y(a[i])); else sc.moveTo(x, Y(a[i])); }
         sc.stroke();
@@ -711,16 +776,28 @@ function makeKickEngine(outRate) {
           var from = Math.floor(x * count / w), to = Math.floor((x + 1) * count / w), lo = before, hi = before;
           for (i = from; i < to; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; }
           before = a[to - 1];
+          if (dotted && x % (7 * dot) >= 4 * dot) continue;
           sc.moveTo(x + 0.5, Y(hi) - 0.5 * f.ratio); sc.lineTo(x + 0.5, Y(lo) + 0.5 * f.ratio);
         }
         sc.stroke();
       }
+      sc.setLineDash([]);
     }
     var now = see(), pitch = pitchOf() === 'click' ? shot.hz2 : shot.hz;
     if (now.all) trace(shot.all, GREY, 1);
     if (now.rumble) trace(shot.rumble, GREEN, 1.5);
     if (now.body) trace(shot.body, BLUE, 1.5);
+    if (now.texture) trace(shot.texture, VIOLET, 1.5, true);
     if (now.click) trace(shot.click, PINK, 1.5);
+    if (now.lfo) {      /* the rumble's LFO: a line down the picture where each cycle starts, and its wave, +1 at the top */
+      var cycle = bar / T.lfoPerBar[value.lper], firstStart = (1 - value.lphase / 128) % 1 * cycle, gap = cycle / span * w;
+      sc.strokeStyle = LIME; sc.lineWidth = f.ratio; sc.setLineDash([2 * f.ratio, 4 * f.ratio]); sc.beginPath();
+      if (gap >= 8 * f.ratio) for (s = firstStart; s < span; s += cycle) if (s > 0) { x = Math.round(s / span * w) + 0.5; sc.moveTo(x, f.top); sc.lineTo(x, f.bottom); }
+      sc.stroke();
+      sc.lineWidth = 1.5 * f.ratio; sc.setLineDash([10 * f.ratio, 4 * f.ratio, 2 * f.ratio, 4 * f.ratio]); sc.beginPath();
+      for (x = 0; x < w; x++) { i = Math.min(count - 1, Math.floor(x * count / w)); if (x) sc.lineTo(x, Y(shot.lfo[i])); else sc.moveTo(x, Y(shot.lfo[i])); }
+      sc.stroke(); sc.setLineDash([]);
+    }
     if (now.pitch) {
       sc.strokeStyle = AMBER; sc.lineWidth = 1.5 * f.ratio; sc.setLineDash([6 * f.ratio, 4 * f.ratio]); sc.beginPath();      /* the pitch: 16 Hz at the bottom, 4 kHz at the top */
       for (x = 0; x < w; x++) { i = Math.min(count - 1, Math.floor(x * count / w)); if (x) sc.lineTo(x, pitchY(pitch[i])); else sc.moveTo(x, pitchY(pitch[i])); }
@@ -779,7 +856,7 @@ function makeKickEngine(outRate) {
     pointOn = true; drawOverlay();
     var now = see();
     readout.textContent = (i / RATE * 1000).toFixed(2) + ' ms' +
-      ['all', 'body', 'click', 'rumble'].map(function (name) { return now[name] ? ' · ' + name.toUpperCase() + ' ' + signed(shot[name][i]) : ''; }).join('') +
+      ['all', 'body', 'texture', 'click', 'rumble', 'lfo'].map(function (name) { return now[name] ? ' · ' + name.toUpperCase() + ' ' + signed(shot[name][i]) : ''; }).join('') +
       (now.pitch ? ' · ' + pitchOf().toUpperCase() + ' PITCH ' + (pitchOf() === 'click' ? shot.hz2 : shot.hz)[i].toFixed(1) + ' Hz' : '');
   }
   function hidePoint() { pointOn = false; drawOverlay(); rest(); }
@@ -817,7 +894,7 @@ function makeKickEngine(outRate) {
     function words(layer, list) { return list.map(function (k) { return (k.name.indexOf(layer) ? layer + ' ' : '') + k.name + ' ' + (k.options ? k.options[value[k.id]] : k.text(value[k.id])); }).join(', '); }
     status.textContent = 'The picture shows the first ' + timeText(span) + '. The wave is highest, ' + peak.toFixed(2) + ' of full level, at ' + (peakAt / RATE * 1000).toFixed(1) + ' ms' +
       (quiet < shot.count - 1 ? ', and is below 1 % after ' + Math.round((quiet + 1) / RATE * 1000) + ' ms. ' : ', and is still above 1 % at the end of the picture. ') +
-      words('BODY', KICK) + ', ' + words('CLICK', CLICK) + ', ' + words('RUMBLE', RUMBLE) +
+      words('BODY', KICK) + ', ' + words('TEXTURE', TEXTURE) + ', ' + words('CLICK', CLICK) + ', ' + words('RUMBLE', RUMBLE) +
       '. The LFO: ' + value.trigs + ' trigs in ' + value.steps + ' steps at ' + value.bpm + ' BPM.';
   }
 
@@ -849,12 +926,13 @@ function makeKickEngine(outRate) {
     });
   }
   build(document.getElementById('kick'), KICK);
+  build(document.getElementById('texture'), TEXTURE);
   build(document.getElementById('click'), CLICK);
   build(document.getElementById('rumble'), RUMBLE);
   build(document.getElementById('lfo'), LFO);
 
   /* ---- the tabs ---- */
-  var TABS = ['body', 'click', 'rumble', 'lfo', 'presets'];
+  var TABS = ['body', 'texture', 'click', 'rumble', 'lfo', 'presets'];
   function openTab(name, focus) {
     tab = name;
     TABS.forEach(function (t) {
@@ -931,6 +1009,9 @@ function makeKickEngine(outRate) {
       if (values.ddiv === undefined && isFinite(Number(values.dtime))) add.ddiv = nearest(T.delayBars, 0.01 * Math.pow(2, Number(values.dtime) / 127 * 5.64));
       /* a preset from before SIZE: its reverb fell to nothing in its LENGTH at its tempo, so SIZE takes that time */
       if (values.size === undefined && T.lengths[values.rlen] !== undefined) add.size = 127 * Math.log2(T.lengths[values.rlen] * bar / 0.15) / 4;
+      var oldCycle = T.lfoBars[values.ldiv !== undefined ? values.ldiv : add.ldiv];      /* a preset from before LFO PER BAR: the nearest number of cycles */
+      if (values.lper === undefined && oldCycle) { add.lper = 0; T.lfoPerBar.forEach(function (per, n) { if (Math.abs(Math.log(per * oldCycle)) < Math.abs(Math.log(T.lfoPerBar[add.lper] * oldCycle))) add.lper = n; }); }
+      if (values.tex === undefined) add.tex = 0;      /* a preset from before the texture: it sounds as it did */
       values = Object.assign({}, values, add);
     }
     for (var id in controls) {

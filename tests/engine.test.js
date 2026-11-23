@@ -14,7 +14,7 @@ const RATE = 96000;
 /* one hit from silence: the layers' samples for `seconds` */
 function hit(values, seconds) {
   const core = makeCore(RATE), count = Math.floor(RATE * seconds);
-  const shot = { all: new Float32Array(count), body: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count) };
+  const shot = { all: new Float32Array(count), body: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count), texture: new Float32Array(count), lfo: new Float32Array(count) };
   core.message({ set: values }); core.message({ hit: 1 });
   for (let i = 0; i < count; i++) { core.tick(); for (const name in shot) shot[name][i] = core[name]; }
   return shot;
@@ -25,7 +25,7 @@ const allFinite = (wave) => wave.every(Number.isFinite);
 /* every click mode and drive type, at both ends of the knobs, through the output filter: no bad value, no overload */
 for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0, 127]) {
   const out = new Float32Array(48000), kick = makeKickEngine(48000);
-  kick.message({ set: { mode, type, attack: end, cattack: end, rattack: end, drive: end, rphase: end, sweep: end, bend: end, pitch: end ? 60 : 0, delay: end, dfbk: end, llevel: end, ldark: end, bpm: 200 }, run: true, drone: true });
+  kick.message({ set: { mode, type, attack: end, cattack: end, rattack: end, drive: end, rphase: end, sweep: end, bend: end, pitch: end ? 60 : 0, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true, drone: true });
   kick.process(out);
   assert.ok(allFinite(out), `mode ${mode}, type ${type}, knobs at ${end}: a value is not a number`);
   assert.ok(peak(out) <= 1, `mode ${mode}, type ${type}, knobs at ${end}: the output is above full level`);
@@ -77,6 +77,69 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   const level = (wave) => Math.sqrt(wave.subarray(Math.floor(0.8 * RATE), Math.floor(1.2 * RATE)).reduce((sum, v) => sum + v * v, 0));
   const small = hit({ size: 20, rlen: 4, rattack: 0 }, 1.3).rumble, large = hit({ size: 120, rlen: 4, rattack: 0 }, 1.3).rumble;
   assert.ok(level(large) > 10 * level(small), 'SIZE does not change the length of the reverb\'s tail');
+}
+
+/* the texture is the body's second output: its LEVEL moves no other layer, and the body's LEVEL does not move it */
+{
+  const full = hit({}, 1), noTexture = hit({ tex: 0 }, 1), noBody = hit({ level: 0 }, 1);
+  assert.ok(peak(full.texture) > 0.05, 'the texture is silent');
+  assert.strictEqual(peak(noTexture.texture), 0, 'the texture is silent at LEVEL 0');
+  for (const name of ['body', 'click', 'rumble']) assert.deepStrictEqual(noTexture[name], full[name], `the ${name} changed with the texture at 0`);
+  assert.deepStrictEqual(noBody.texture, full.texture, 'the texture changed with the body at 0');
+  assert.deepStrictEqual(hit({}, 1).texture, full.texture, 'two hits from silence do not give the same texture');
+}
+
+/* the gate: DECAY is where the texture ends (no reverb), ATTACK cuts its start, OPEN is how bright it is */
+{
+  const end = (wave) => { const top = peak(wave); let last = 0; wave.forEach((v, i) => { if (Math.abs(v) > top / 100) last = i; }); return last / RATE; };
+  const bright = (wave) => { let moves = 0, size = 0; for (let i = 1; i < wave.length; i++) { moves += (wave[i] - wave[i - 1]) ** 2; size += wave[i] ** 2; } return moves / size; };
+  const dry = { trev: 0, decay: 127 };      /* a long body, so the gate ends the texture and not the body */
+  const short = hit({ ...dry, tdecay: 20 }, 2).texture, long = hit({ ...dry, tdecay: 110 }, 2).texture;
+  assert.ok(end(short) < 0.1, 'a short DECAY does not close the gate');
+  assert.ok(end(long) > 3 * end(short), 'DECAY does not change the length of the texture');
+  const late = hit({ ...dry, tattack: 127 }, 0.3).texture, atOnce = hit({ ...dry, tattack: 0 }, 0.3).texture;
+  assert.ok(peak(late.subarray(0, Math.floor(0.01 * RATE))) < 0.2 * peak(atOnce.subarray(0, Math.floor(0.01 * RATE))), 'ATTACK does not cut the start of the texture');
+  assert.ok(bright(hit({ ...dry, topen: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, topen: 0 }, 0.3).texture), 'OPEN does not change the brightness');
+  assert.ok(bright(hit({ ...dry, tnoise: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, tnoise: 0 }, 0.3).texture), 'NOISE adds no noise');
+}
+
+/* the gate's DCY CURVE: at 0 the gate falls fast at the start, at 127 it stays open and falls at the end; at each curve the texture is closed after DECAY */
+{
+  const dry = { trev: 0, decay: 127, tdecay: 80, tnoise: 127 }, seconds = 0.02 * Math.pow(2, 80 / 127 * 6.64);
+  const level = (wave, from, to) => Math.sqrt(wave.subarray(Math.floor(from * seconds * RATE), Math.floor(to * seconds * RATE)).reduce((sum, v) => sum + v * v, 0));
+  const fast = hit({ ...dry, tcurve: 0 }, seconds * 1.5).texture, line = hit({ ...dry, tcurve: 42 }, seconds * 1.5).texture, held = hit({ ...dry, tcurve: 127 }, seconds * 1.5).texture;
+  assert.ok(level(line, 0.5, 0.8) > 3 * level(fast, 0.5, 0.8), 'DCY CURVE at 42 is not slower than at 0');
+  assert.ok(level(held, 0.5, 0.8) > 1.5 * level(line, 0.5, 0.8), 'DCY CURVE at 127 does not keep the gate open');
+  for (const wave of [fast, line, held]) assert.ok(level(wave, 1.1, 1.5) < 0.001 * level(wave, 0, 1), 'the texture goes on after DECAY');
+}
+
+/* the texture's reverb: REVERB at 0 leaves no tail after the gate, and SIZE is the length of the tail */
+{
+  const tail = (wave) => Math.sqrt(wave.subarray(Math.floor(0.6 * RATE), Math.floor(0.9 * RATE)).reduce((sum, v) => sum + v * v, 0));
+  const gate = { tdecay: 20, decay: 20 };
+  assert.ok(tail(hit({ ...gate, trev: 0 }, 1).texture) < 1e-6, 'the texture goes on with REVERB at 0');
+  assert.ok(tail(hit({ ...gate, trev: 127, tsize: 127 }, 1).texture) > 100 * tail(hit({ ...gate, trev: 127, tsize: 20 }, 1).texture), 'SIZE does not change the length of the tail');
+}
+
+/* the two filters at the texture's end, after its reverb: LOW CUT takes the lows out, HIGH CUT takes the highs out, and at their ends they are off */
+{
+  const size = (wave) => Math.sqrt(wave.reduce((sum, v) => sum + v * v, 0));
+  const moves = (wave) => { let total = 0; for (let i = 1; i < wave.length; i++) total += (wave[i] - wave[i - 1]) ** 2; return Math.sqrt(total); };
+  const lows = { tnoise: 0, drive: 0, topen: 127 }, highs = { tnoise: 127, topen: 127, level: 0 };      /* a texture of the body's sine only; a texture with much noise */
+  assert.ok(size(hit({ ...lows, tlow: 127 }, 0.5).texture) < 0.05 * size(hit({ ...lows, tlow: 0 }, 0.5).texture), 'LOW CUT leaves the lows');
+  assert.ok(moves(hit({ ...highs, thigh: 0 }, 0.5).texture) < 0.05 * moves(hit({ ...highs, thigh: 127 }, 0.5).texture), 'HIGH CUT leaves the highs');
+  assert.ok(moves(hit({ ...highs, tlow: 127 }, 0.5).texture) > 0.5 * moves(hit({ ...highs, tlow: 0 }, 0.5).texture), 'LOW CUT takes the highs out too');
+  assert.ok(size(hit({ ...lows, thigh: 0 }, 0.5).texture) > 0.5 * size(hit({ ...lows, thigh: 127 }, 0.5).texture), 'HIGH CUT takes the lows out too');
+}
+
+/* the rumble's LFO: LFO PER BAR is the number of its cycles in a bar at the tempo, and LFO PHASE is where in its cycle it starts */
+{
+  const ups = (wave) => { let count = 0; for (let i = 1; i < wave.length; i++) if (wave[i - 1] < 0 && wave[i] >= 0) count++; return count; };
+  const almostBar = 0.99 * 240 / 100;
+  for (const [lper, cycles] of [[2, 1], [4, 3], [5, 4], [9, 8]]) assert.strictEqual(ups(hit({ bpm: 100, lper }, almostBar).lfo), cycles - 1, `LFO PER BAR ${cycles}: not ${cycles} cycles in a bar`);
+  const from0 = hit({ lper: 3 }, 0.5).lfo, from180 = hit({ lper: 3, lphase: 64 }, 0.5).lfo, from90 = hit({ lper: 3, lphase: 32 }, 0.01).lfo;
+  for (let i = 0; i < from0.length; i += 997) assert.ok(Math.abs(from0[i] + from180[i]) < 1e-6, 'LFO PHASE at 180 degrees is not the wave upside down');
+  assert.ok(from90[100] > 0.99, 'LFO PHASE at 90 degrees does not start at the top');
 }
 
 console.log('engine: all tests pass');
