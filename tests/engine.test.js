@@ -25,7 +25,7 @@ const allFinite = (wave) => wave.every(Number.isFinite);
 /* every click mode and drive type, at both ends of the knobs, through the output filter: no bad value, no overload */
 for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0, 127]) {
   const out = new Float32Array(48000), kick = makeKickEngine(48000);
-  kick.message({ set: { mode, type, attack: end, cattack: end, rattack: end, drive: end, rphase: end, sweep: end, bend: end, pitch: end ? 60 : 0, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true, drone: true });
+  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack: end, drive: end, rphase: end, sweep: end, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch: end ? 60 : 0, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true, drone: true });
   kick.process(out);
   assert.ok(allFinite(out), `mode ${mode}, type ${type}, knobs at ${end}: a value is not a number`);
   assert.ok(peak(out) <= 1, `mode ${mode}, type ${type}, knobs at ${end}: the output is above full level`);
@@ -140,6 +140,26 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   const from0 = hit({ lper: 3 }, 0.5).lfo, from180 = hit({ lper: 3, lphase: 64 }, 0.5).lfo, from90 = hit({ lper: 3, lphase: 32 }, 0.01).lfo;
   for (let i = 0; i < from0.length; i += 997) assert.ok(Math.abs(from0[i] + from180[i]) < 1e-6, 'LFO PHASE at 180 degrees is not the wave upside down');
   assert.ok(from90[100] > 0.99, 'LFO PHASE at 90 degrees does not start at the top');
+}
+
+/* the click's MOD LEVEL morphs SNAP, TUNE and SWEEP between 2 to 5 markers: a marker's place gives that marker, and between two markers the knobs' values are mixed */
+{
+  const click = (values) => hit({ rumble: 0, tex: 0, cpts: 0, ...values }, 0.2).click;      /* 2 markers, when the test does not give another number */
+  const one = { tune1: 10, snap1: 20, bend1: 30 }, two = { tune2: 110, snap2: 90, bend2: 100 }, three = { tune3: 60, snap3: 127, bend3: 0 };
+  const as1 = (marker, n) => Object.fromEntries(Object.entries(marker).map(([name, v]) => [name.replace(String(n), '1'), v]));      /* a marker's values, put at marker 1 */
+  assert.deepStrictEqual(click({ ...one, ...two, cmod: 0 }), click(one), 'MOD LEVEL at 0 is not marker 1');
+  assert.deepStrictEqual(click({ ...one, ...two, cmod: 120 }), click(as1(two, 2)), 'MOD LEVEL at its top is not the last of 2 markers');
+  assert.deepStrictEqual(click({ ...one, ...two, ...three, cpts: 1, cmod: 120 }), click(as1(three, 3)), 'MOD LEVEL at its top is not the last of 3 markers');
+  assert.deepStrictEqual(click({ ...one, ...two, ...three, cpts: 1, cmod: 60 }), click(as1(two, 2)), 'MOD LEVEL at the middle is not marker 2 of 3');
+  assert.deepStrictEqual(click({ ...one, ...two, cmod: 60 }), click({ tune1: 60, snap1: 55, bend1: 65 }), 'MOD LEVEL between two markers does not mix their values');
+  assert.deepStrictEqual(click({ ...one, ...two, cpts: -1, cmod: 90 }), click(one), 'with one marker the click is not marker 1 at each MOD LEVEL');
+  assert.deepStrictEqual(hit({ ...one, ...two, cmod: 90 }, 0.2).click, hit(one, 0.2).click, 'a kick with no number of markers does not have one marker');
+  for (const [name, low, high] of [['cattack', 0, 100], ['ccurve', 10, 120], ['noise', 0, 127]]) {      /* ATTACK, PITCH CURVE and NOISE are in the markers too */
+    assert.deepStrictEqual(click({ [name + 1]: low, [name + 2]: high, cmod: 120 }), click({ [name + 1]: high }), `MOD LEVEL at its top does not give marker 2's ${name}`);
+    assert.notDeepStrictEqual(click({ [name + 1]: low, [name + 2]: high, cmod: 0 }), click({ [name + 1]: high }), `${name} does not change the click`);
+  }
+  assert.notDeepStrictEqual(click({ ...one, ...two, cmod: 0 }), click({ ...one, ...two, cmod: 40 }), 'MOD LEVEL does not change the click');
+  assert.deepStrictEqual(click({ cmod: 90, cpts: 3 }), click({}), 'MOD LEVEL changes the click when all the markers are the same');
 }
 
 console.log('engine: all tests pass');

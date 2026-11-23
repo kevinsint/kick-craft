@@ -89,6 +89,22 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .knob .name, .knob output { color: var(--lit); font-weight: 600; }
 .knob .where { color: var(--dev-muted); margin-left: auto; }
 .knob input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--lit); }
+/* the click's MOD LEVEL: a wide slider, its markers above it, and the marker's knobs in a box below */
+.morph { display: grid; gap: var(--s1); font-family: var(--mono); }
+.morph .name, .morph output { color: var(--lit); font-weight: 600; }
+.track { position: relative; padding: 56px 22px 0; }
+#marks { position: absolute; inset: 0 0 auto 0; height: 56px; }
+#marks.open { cursor: copy; }
+.track input[type="range"]:disabled { accent-color: var(--dev-edge); }
+.track input[type="range"] { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--lit); }
+.mark { position: absolute; top: 0; transform: translateX(-50%); min-width: 44px; min-height: 44px; padding: 0 var(--s1); font: 600 1rem var(--mono);
+  background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; cursor: pointer; }
+.mark::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 12px; margin-left: -1px; background: var(--dev-edge); }
+.mark[aria-pressed="true"] { background: var(--lit); border-color: var(--lit); color: #15191d; }
+.mark[aria-pressed="true"]::before { content: "\25CF\00A0" / ""; }
+.mark[aria-pressed="true"]::after { background: var(--lit); }
+.drawer { display: grid; gap: var(--s1); border: 2px solid var(--dev-edge); border-top-width: 6px; border-radius: 0 0 6px 6px; padding: var(--s1) var(--s2) var(--s2); }
+.knob input[type="range"]:disabled { accent-color: var(--dev-edge); }
 canvas#pattern { display: block; width: 100%; height: auto; background: #000; border: 2px solid var(--dev-edge); border-radius: 4px; }
 
 .path { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: stretch; margin: 0; padding: 0; list-style: none; }
@@ -116,7 +132,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 31</p>
+      <p class="version">Draft 42</p>
     </div>
     <div class="device">
       <div class="row">
@@ -158,7 +174,31 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
       </div>
       <div role="tabpanel" id="panel-body" aria-labelledby="tab-body"><div class="knobs" id="kick"></div></div>
       <div role="tabpanel" id="panel-texture" aria-labelledby="tab-texture" hidden><div class="knobs" id="texture"></div></div>
-      <div role="tabpanel" id="panel-click" aria-labelledby="tab-click" hidden><div class="knobs" id="click"></div></div>
+      <div role="tabpanel" id="panel-click" aria-labelledby="tab-click" hidden>
+        <div class="stack">
+          <div class="morph" role="group" aria-labelledby="morph-name">
+            <div class="row">
+              <label class="name" id="morph-name" for="in-cmod">MOD LEVEL</label> <output id="mod-shown" for="in-cmod"></output>
+            </div>
+            <div class="track">
+              <div id="marks"></div>
+              <input id="in-cmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="morph-where">
+            </div>
+            <div class="drawer">
+              <p class="hint" id="morph-where"></p>
+              <div class="knobs" id="morph-knobs"></div>
+              <div class="row">
+                <button class="btn danger" id="mark-remove" type="button">Remove Marker…</button>
+                <span class="row" id="mark-confirm" hidden>
+                  <button class="btn danger" id="mark-yes" type="button">Remove Marker</button>
+                  <button class="btn" id="mark-no" type="button">Cancel</button>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="knobs" id="click"></div>
+        </div>
+      </div>
       <div role="tabpanel" id="panel-rumble" aria-labelledby="tab-rumble" hidden><div class="knobs" id="rumble"></div></div>
       <div role="tabpanel" id="panel-lfo" aria-labelledby="tab-lfo" hidden>
         <div class="stack">
@@ -170,8 +210,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
       <div role="tabpanel" id="panel-presets" aria-labelledby="tab-presets" hidden>
         <div class="stack">
           <div class="presets">
-            <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
-            <button class="btn main" id="preset-save" type="button">Save</button>
             <div class="field"><label for="preset-list">Saved Presets</label><select id="preset-list"></select></div>
             <button class="btn" id="preset-load" type="button">Load</button>
             <button class="btn danger" id="preset-delete" type="button">Delete…</button>
@@ -180,8 +218,21 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
               <button class="btn" id="preset-no" type="button">Cancel</button>
             </span>
           </div>
+          <p class="hint" id="open-text"></p>
+          <div class="presets">
+            <button class="btn" id="preset-update" type="button">Update Original</button>
+            <button class="btn danger" id="preset-revert" type="button">Revert to Original…</button>
+            <span class="row" id="revert-confirm" hidden>
+              <button class="btn danger" id="revert-yes" type="button">Revert to Original</button>
+              <button class="btn" id="revert-no" type="button">Cancel</button>
+            </span>
+          </div>
+          <div class="presets">
+            <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
+            <button class="btn main" id="preset-save" type="button">Create New Preset</button>
+          </div>
           <p class="hint" id="preset-status" role="status"></p>
-          <p class="hint">A preset keeps every knob of BODY, TEXTURE, CLICK, RUMBLE and LFO. Save with the name of a saved preset to replace it.</p>
+          <p class="hint">Each change is saved as you make it, in a copy of the open preset. Load opens a copy: the saved preset changes only with Update Original. A preset keeps every knob of BODY, TEXTURE, CLICK, RUMBLE and LFO.</p>
         </div>
       </div>
     </div>
@@ -237,7 +288,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <ol class="path">
       <li><span class="step">1. Trigger</span><span class="ctl">ALGORITHM: the LFO</span><span>The chosen LFO goes up through 1 V. The two oscillators start again at the same place, so each hit is the same. The hit before fades in 2 ms. The rumble does not start again: its tail goes on under the next hit.</span></li>
       <li><span class="step">2. Pitch envelope</span><span class="ctl">SWEEP, DEPTH, PITCH CURVE</span><span>The body’s pitch starts SWEEP octaves above the note and falls to it in the DEPTH time, with the shape of its PITCH CURVE.</span></li>
-      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 100 Hz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 50 ms.</span></li>
+      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 100 Hz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 50 ms. TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each of 1 to 5 markers, and MOD LEVEL moves the click from the first marker to the last: between two markers the values are mixed.</span></li>
       <li><span class="step">4. Body oscillator</span><span class="ctl">SELECT: the note, PHASE</span><span>A sine at the note plus the pitch envelope. PHASE is where in its cycle it starts, 0 to 357 degrees: at 0 it starts soft, at 90 with a hard edge, at 180 it goes down first. In FM mode the click bends it; in RING mode the click multiplies it.</span></li>
       <li><span class="step">5. Noise</span><span class="ctl">NOISE, TONE</span><span>A burst of 15 ms at the hit, through a low-pass filter. It is part of the click, but the click’s ATTACK does not move it.</span></li>
       <li><span class="step">6. Body level</span><span class="ctl">ATTACK, ATK CURVE, DECAY</span><span>The DECAY starts at the hit and does not move. The ATTACK only cuts the start of the body, for 1 ms to 400 ms, so the click has the room; after that time the wave is the same as with no attack. ATK CURVE is the shape of the cut: the body stays low and comes up at the end (127), a straight line (42), or up at once (0).</span></li>
@@ -303,6 +354,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <div class="choice"><strong>The wave and the curves are mine.</strong><span>The manual does not give them. I use a sine and curves that fall fast, then slowly, which is the common way to make this kind of kick. The ranges in the table above are a first estimate, to tune by ear on this page.</span></div>
     <div class="choice"><strong>The drive is after the level envelope.</strong><span>The manual does not say where it is. After the envelope, the drive acts as a compressor on the start of the hit, which is what the manual describes.</span></div>
     <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
+    <div class="choice"><strong>MOD LEVEL is one slider for six knobs.</strong><span>TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each marker. The markers are above the slider, 1 to 5 of them (with one marker the slider is off, and the knobs in the box are the click’s), and they share its travel in equal parts: with 3 markers, marker 2 is at the middle. Select a marker: MOD LEVEL goes to that marker, and the knobs in the box below show its values and change them. Between two markers the box shows the mix of the two markers, and the knobs do not move. Click above the slider between two markers: a new marker goes there with the mix of that place, and all the markers take equal places again. Remove Marker takes the selected marker out, after a confirmation. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before MOD LEVEL. On the FM-1, an LFO of the bank can move MOD LEVEL; it has no knob there yet.</span></div>
     <div class="choice"><strong>The rumble’s attack is its own.</strong><span>Before, the rumble came up as the body went down. Now a long body can have a fast rumble, and a short body a slow one.</span></div>
     <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a number of cycles in a bar at the tempo, it has three shapes and a phase, and it starts its cycle when you start the LFO of the trigger. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
     <div class="choice"><strong>The delay and the reverb are the rumble’s own.</strong><span>They are not the DR1’s delay and reverb, and the body and the click do not go to the output through them. The delay needs memory in the firmware: half a bar at 40 BPM is 3 s, about 16 500 samples at one eighth of the sample rate.</span></div>
@@ -338,6 +390,12 @@ function kickTimes() {
     textureLow: function (v) { return 20 * Math.pow(2, v / 127 * 6.64); },                   /* the texture's LOW CUT: 20 Hz .. 2 kHz, off at 0 */
     textureHigh: function (v) { return 200 * Math.pow(2, v / 127 * 6.32); },                 /* the texture's HIGH CUT: 200 Hz .. 16 kHz, off at 127 */
     textureSize: function (v) { return 0.1 * Math.pow(2, v / 127 * 5); },                   /* 100 ms .. 3.2 s for the texture's reverb to fall to nothing */
+    /* the click's MOD LEVEL: the value of a marker's knob (`name`: SNAP, TUNE, SWEEP, ATTACK, PITCH CURVE or NOISE) between its markers. `cpts` + 2 markers share MOD LEVEL's travel, 0 .. 120, in equal parts: 120 so that each marker of 2, 3, 4 or 5 is at a whole value */
+    morph: function (values, name) {
+      if (values.cpts < 0) return values[name + 1];      /* one marker only (`cpts` is -1): MOD LEVEL has nothing to mix */
+      var at = values.cmod / 120 * (values.cpts + 1), n = Math.min(values.cpts, Math.floor(at)), from = values[name + (n + 1)];
+      return from + (values[name + (n + 2)] - from) * (at - n);
+    },
     lengths: [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4],                                        /* the rumble's LENGTH, in bars of 4 beats */
     length: function (index, bpm) { return this.lengths[index] * 240 / bpm; },              /* ... and in seconds at a tempo */
     size: function (v) { return 0.15 * Math.pow(2, v / 127 * 4); },                         /* the rumble's SIZE: 150 ms .. 2.4 s for the reverb to fall to nothing, not on the clock */
@@ -353,10 +411,11 @@ function makeCore(rate) {
   var T = kickTimes(), TWO_PI = 2 * Math.PI;
   var ECHO = [0.0297, 0.0371, 0.0411, 0.0533];      /* the rumble's four echoes, in seconds: no two in a simple ratio */
   var p = { pitch: 24, decay: 64, depth: 56, sweep: 36, drive: 30, level: 100, curve: 96, phase: 0, type: 0, attack: 0, acurve: 100, hpf: 1,
-            click: 71, bend: 76, tune: 48, snap: 64, cattack: 0, ccurve: 96, noise: 42, tone: 80, mode: 0,
+            click: 71, cmod: 0, cpts: -1, tone: 80, mode: 0,
             rumble: 55, rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, duck: 80, reverb: 127, size: 55, delay: 0, ddiv: 3, dfbk: 50, lper: 3, lphase: 0, lshape: 0, llevel: 0, ldark: 0, bpm: 120, steps: 16, trigs: 4, shift: 0,
             tex: 64, tattack: 0, tdecay: 64, tcurve: 0, topen: 90, tnoise: 50, trev: 40, tsize: 64, tlow: 0, thigh: 127 };
   var d = {}, k;
+  for (k = 1; k <= 5; k++) { p['snap' + k] = 64; p['tune' + k] = 48; p['bend' + k] = 76; p['cattack' + k] = 0; p['ccurve' + k] = 96; p['noise' + k] = 42; }      /* the click's SNAP, TUNE, SWEEP, ATTACK, PITCH CURVE and NOISE at each of the 5 markers of MOD LEVEL */
   var lines = ECHO.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), at = [0, 0, 0, 0], damp = [0, 0, 0, 0], back = [0, 0, 0, 0];
   var late = new Float32Array(Math.ceil(rate / 16) + 2), lateAt = 0;      /* the rumble's PHASE: up to one cycle of C0 */
   var dark1 = 0, dark2 = 0, rumbleGain = 1, rumbleN = -1;
@@ -382,9 +441,9 @@ function makeCore(rate) {
     d.depth = T.depth(p.depth); d.octaves = p.sweep / 127 * 5; d.snap = p.curve / 127;
     d.gain = 1 + p.drive / 127 * 15; d.wet = Math.min(1, p.drive / 16); d.bend = p.drive / 127;
     d.hold = 1 + Math.floor(p.drive / 127 * 24 * rate / 48000); d.crush = Math.pow(2, 11 - p.drive / 127 * 8);      /* CRUSH: fewer samples, fewer bits */
-    d.amount = p.click / 127; d.clickHz = T.tune(p.tune); d.clickTime = T.snap(p.snap); d.clickTau = d.clickTime / 5;
-    d.clickAttack = T.clickAttack(p.cattack); d.clickOct = p.bend / 127 * 5; d.clickSnap = p.ccurve / 127;
-    d.noiseLevel = p.noise / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(p.tone) / (rate / noiseEvery));
+    d.amount = p.click / 127; d.clickHz = T.tune(T.morph(p, 'tune')); d.clickTime = T.snap(T.morph(p, 'snap')); d.clickTau = d.clickTime / 5;
+    d.clickAttack = T.clickAttack(T.morph(p, 'cattack')); d.clickOct = T.morph(p, 'bend') / 127 * 5; d.clickSnap = T.morph(p, 'ccurve') / 127;
+    d.noiseLevel = T.morph(p, 'noise') / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(p.tone) / (rate / noiseEvery));
     d.hpKeep = 1 - TWO_PI * 30 / rate;
     d.texLevel = p.tex / 127; d.texAttack = T.textureAttack(p.tattack); d.texDecay = T.textureDecay(p.tdecay); d.texBend = 5 - p.tcurve / 127 * 15; d.texOpen = T.textureOpen(p.topen) / 30;
     d.texNoise = p.tnoise / 127 * 3; d.texReverb = p.trev / 127;
@@ -618,14 +677,16 @@ function makeKickEngine(outRate) {
   ];
   var CLICK = [
     { id: 'click', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 71, text: plain },
-    { id: 'cattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 0, text: function (v) { return ms(T.clickAttack(v)); } },
-    { id: 'snap', name: 'SNAP', where: 'K3', min: 0, max: 127, value: 64, text: function (v) { return ms(T.snap(v)); } },
-    { id: 'tune', name: 'TUNE', where: 'K2', min: 0, max: 127, value: 48, text: function (v) { return Math.round(T.tune(v)) + ' Hz'; } },
-    { id: 'bend', name: 'SWEEP', where: 'K4', min: 0, max: 127, value: 76, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
-    { id: 'ccurve', name: 'PITCH CURVE', where: 'OCT+K1', min: 0, max: 127, value: 96, text: plain },
     { id: 'mode', name: 'CLICK MODE', where: 'ALGO', options: ['MIX', 'FM', 'RING'], value: 0 },
-    { id: 'noise', name: 'NOISE', where: 'OCT-K1', min: 0, max: 127, value: 42, text: plain },
     { id: 'tone', name: 'TONE', where: 'OCT-K4', min: 0, max: 127, value: 80, text: function (v) { return Math.round(T.tone(v)) + ' Hz'; } }
+  ];
+  var MARKER = [      /* the click's knobs that have a value at each marker of MOD LEVEL */
+    { id: 'tune', name: 'TUNE', where: 'K2', min: 0, max: 127, value: 48, text: function (v) { return Math.round(T.tune(v)) + ' Hz'; } },
+    { id: 'snap', name: 'SNAP', where: 'K3', min: 0, max: 127, value: 64, text: function (v) { return ms(T.snap(v)); } },
+    { id: 'bend', name: 'SWEEP', where: 'K4', min: 0, max: 127, value: 76, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
+    { id: 'cattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 0, text: function (v) { return ms(T.clickAttack(v)); } },
+    { id: 'ccurve', name: 'PITCH CURVE', where: 'OCT+K1', min: 0, max: 127, value: 96, text: plain },
+    { id: 'noise', name: 'NOISE', where: 'OCT-K1', min: 0, max: 127, value: 42, text: plain }
   ];
   var RUMBLE = [
     { id: 'rumble', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 55, text: plain },
@@ -662,7 +723,7 @@ function makeKickEngine(outRate) {
   var WORKLET = 'registerProcessor("dr1-kick", class extends AudioWorkletProcessor {' +
     'constructor() { super(); var me = this; this.engine = makeKickEngine(sampleRate); this.shown = -1; this.hits = 0; this.port.onmessage = function (m) { me.engine.message(m.data); }; }' +
     'process(inputs, outputs) { this.engine.process(outputs[0][0]); var s = this.engine.core.step; if (s !== this.shown) { this.shown = s; this.port.postMessage({ step: s }); } var h = this.engine.core.hits; if (h !== this.hits) { this.hits = h; this.port.postMessage({ hitAt: currentTime }); } return true; } });';
-  function send(m) { if (post) post(m); else pending.push(m); }
+  function send(m) { if (m.set) changedByHand(); if (post) post(m); else pending.push(m); }      /* each change of a knob is also kept: see the presets */
   function engineReady(kind, how) {
     post = how;
     post({ set: copy() }); post({ solo: soloLayer() });
@@ -894,7 +955,7 @@ function makeKickEngine(outRate) {
     function words(layer, list) { return list.map(function (k) { return (k.name.indexOf(layer) ? layer + ' ' : '') + k.name + ' ' + (k.options ? k.options[value[k.id]] : k.text(value[k.id])); }).join(', '); }
     status.textContent = 'The picture shows the first ' + timeText(span) + '. The wave is highest, ' + peak.toFixed(2) + ' of full level, at ' + (peakAt / RATE * 1000).toFixed(1) + ' ms' +
       (quiet < shot.count - 1 ? ', and is below 1 % after ' + Math.round((quiet + 1) / RATE * 1000) + ' ms. ' : ', and is still above 1 % at the end of the picture. ') +
-      words('BODY', KICK) + ', ' + words('TEXTURE', TEXTURE) + ', ' + words('CLICK', CLICK) + ', ' + words('RUMBLE', RUMBLE) +
+      words('BODY', KICK) + ', ' + words('TEXTURE', TEXTURE) + ', ' + words('CLICK', CLICK) + ', CLICK MOD LEVEL ' + Math.round(value.cmod / 120 * 100) + ' % of ' + (value.cpts + 2) + ' markers, ' + words('CLICK', MARKER) + ', ' + words('RUMBLE', RUMBLE) +
       '. The LFO: ' + value.trigs + ' trigs in ' + value.steps + ' steps at ' + value.bpm + ' BPM.';
   }
 
@@ -917,7 +978,7 @@ function makeKickEngine(outRate) {
       }
       input.addEventListener('input', function () {
         value[k.id] = Number(input.value); show();
-        var one = {}; one[k.id] = value[k.id]; send({ set: one });
+        var one = {}; one[k.id] = value[k.id]; send({ set: clickKnob(k.id) ? copy() : one });
         if (list === LFO) { drawPattern(); patternText(); if (k.id === 'bpm') { setSpan(); redraw(true); } } else redraw(true);
       });
       head.appendChild(name); if (!k.options) head.appendChild(shown); head.appendChild(where); box.appendChild(head); box.appendChild(input); parent.appendChild(box);
@@ -930,6 +991,79 @@ function makeKickEngine(outRate) {
   build(document.getElementById('click'), CLICK);
   build(document.getElementById('rumble'), RUMBLE);
   build(document.getElementById('lfo'), LFO);
+
+  /* ---- the click's MOD LEVEL: TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each of 5 markers (tune1 .. tune5, ...), shown above the slider;
+     the knobs in the box show the marker where MOD LEVEL is, or the mix between two markers ---- */
+  var MARKER_KNOBS = ['tune', 'snap', 'bend', 'cattack', 'ccurve', 'noise'], modInput = document.getElementById('in-cmod'), modShown = document.getElementById('mod-shown'), whereText = document.getElementById('morph-where');
+  var removeButton = document.getElementById('mark-remove'), confirmBox = document.getElementById('mark-confirm'), strip = document.getElementById('marks'), marks = [];
+  build(document.getElementById('morph-knobs'), MARKER);
+  value.cmod = 0; value.cpts = -1;      /* MOD LEVEL has its own slider, and the two buttons change the number of markers: no knob from build() */
+  controls.cmod = { input: modInput, show: function () {}, low: 0, high: 120, first: 0 };
+  controls.cpts = { input: {}, show: function () {}, low: -1, high: 3, first: -1 };
+  function setKnob(id, v) { value[id] = v; controls[id].input.value = v; controls[id].show(); }
+  function markAt(n) { return value.cpts < 0 ? 0 : n * 120 / (value.cpts + 1); }      /* a marker's place on MOD LEVEL: the markers share its travel in equal parts */
+  function markNow() { for (var n = 0; n <= value.cpts + 1; n++) if (markAt(n) === value.cmod) return n; return -1; }
+  function showMorph() {
+    if (value.cpts < 0) value.cmod = 0;      /* one marker: MOD LEVEL stays on it, and its slider is off */
+    var now = markNow(), count = value.cpts + 2, low = Math.min(count - 2, Math.floor(value.cmod / 120 * (count - 1))), percent = Math.round(value.cmod / 120 * 100) + ' %';
+    MARKER_KNOBS.forEach(function (id) { setKnob(id, now >= 0 ? value[id + (now + 1)] : Math.round(T.morph(value, id))); controls[id].input.disabled = now < 0; });
+    whereText.textContent = now >= 0 ? 'Marker ' + (now + 1) + ' of ' + count + '. The knobs below change this marker.' + (count < 2 ? ' Click above the slider to add a marker.' : '')
+      : 'Between marker ' + (low + 1) + ' and marker ' + (low + 2) + ': a mix of the two.' + (count < 5 ? ' Click above the slider to keep these values as a new marker.' : '');
+    marks.forEach(function (mark, n) {      /* the slider's thumb stops 8 px from each end of its track: the markers do the same */
+      mark.hidden = n >= count; mark.style.left = 'calc(30px + ' + (count > 1 ? Math.min(1, n / (count - 1)) : 0) + ' * (100% - 60px))'; mark.setAttribute('aria-pressed', String(n === now));
+    });
+    removeButton.disabled = count < 2 || now < 0; modInput.disabled = count < 2; confirmBox.hidden = true;
+    strip.classList.toggle('open', count < 5);
+    modInput.value = value.cmod; modShown.textContent = percent; modInput.setAttribute('aria-valuetext', percent + (now >= 0 ? ', marker ' + (now + 1) : ', between marker ' + (low + 1) + ' and marker ' + (low + 2)));
+  }
+  function morphChanged() { showMorph(); send({ set: copy() }); redraw(true); }
+  function clickKnob(id) {      /* true for a knob of the marker: its value goes to the marker where MOD LEVEL is, and the engine gets all the values */
+    if (MARKER_KNOBS.indexOf(id) < 0) return false;
+    value[id + (markNow() + 1)] = value[id]; return true;
+  }
+  for (var marker = 1; marker <= 5; marker++) {
+    MARKER_KNOBS.forEach(function (id) { value[id + marker] = value[id]; });
+    (function (n) {
+      var mark = document.createElement('button');
+      mark.type = 'button'; mark.className = 'mark'; mark.textContent = n + 1; mark.setAttribute('aria-label', 'Marker ' + (n + 1));
+      mark.addEventListener('click', function () { value.cmod = markAt(n); morphChanged(); });
+      document.getElementById('marks').appendChild(mark); marks.push(mark);
+    })(marker - 1);
+  }
+  modInput.addEventListener('input', function () { value.cmod = Number(modInput.value); morphChanged(); });
+  /* a new marker at `part` of MOD LEVEL's travel, 0 .. 1: it takes the mix of that place, goes between its two neighbours, and all the markers take equal places */
+  function addMarker(part) {
+    var count = value.cpts + 2, at, low, mix = {}, n;
+    if (count >= 5) return;
+    if (count < 2) {      /* the second marker: a copy of the first, at the other end */
+      MARKER_KNOBS.forEach(function (id) { value[id + 2] = value[id + 1]; });
+      value.cpts = 0; value.cmod = 120; morphChanged(); marks[1].focus(); return;
+    }
+    at = Math.max(0, Math.min(1, part)) * (count - 1); low = Math.min(count - 2, Math.floor(at));
+    value.cmod = at / (count - 1) * 120;
+    MARKER_KNOBS.forEach(function (id) {
+      mix[id] = Math.round(T.morph(value, id));
+      for (n = count; n > low + 1; n--) value[id + (n + 1)] = value[id + n];      /* the markers after it go up by one */
+      value[id + (low + 2)] = mix[id];
+    });
+    value.cpts++; value.cmod = markAt(low + 1); morphChanged();
+    marks[low + 1].focus();
+  }
+  function removeMarker(gone) {      /* the markers after it come down by one, and MOD LEVEL goes to the marker that takes its place */
+    var count = value.cpts + 2, n;
+    MARKER_KNOBS.forEach(function (id) { for (n = gone + 1; n < count; n++) value[id + n] = value[id + (n + 1)]; });
+    value.cpts--; value.cmod = markAt(Math.min(gone, count - 2)); morphChanged();
+    marks[Math.min(gone, count - 2)].focus();
+  }
+  strip.addEventListener('click', function (e) {      /* a click between two markers: a new marker there. No keyboard route: Kevin's decision, 2026-11-23 (D7) */
+    if (e.target !== strip) return;
+    var box = strip.getBoundingClientRect();
+    addMarker((e.clientX - box.left - 30) / (box.width - 60));
+  });
+  removeButton.addEventListener('click', function () { confirmBox.hidden = false; document.getElementById('mark-yes').textContent = 'Remove Marker ' + (markNow() + 1); document.getElementById('mark-no').focus(); });
+  document.getElementById('mark-no').addEventListener('click', function () { confirmBox.hidden = true; removeButton.focus(); });
+  document.getElementById('mark-yes').addEventListener('click', function () { removeMarker(markNow()); });
+  showMorph();
 
   /* ---- the tabs ---- */
   var TABS = ['body', 'texture', 'click', 'rumble', 'lfo', 'presets'];
@@ -998,7 +1132,7 @@ function makeKickEngine(outRate) {
     if (keep) presetList.value = keep;
     if (presetList.selectedIndex < 0) presetList.selectedIndex = 0;
     document.getElementById('preset-load').disabled = document.getElementById('preset-delete').disabled = !presets.length;
-    presetConfirm.hidden = true;
+    presetConfirm.hidden = true; showOpen();
   }
   function applyPreset(values) {      /* a preset is data from outside the page: each value is checked, and a missing one takes its first value */
     if (values) {      /* a preset from before the clock values: the nearest one at the preset's tempo */
@@ -1019,51 +1153,143 @@ function makeKickEngine(outRate) {
       value[id] = values && values[id] !== undefined && isFinite(v) ? Math.max(c.low, Math.min(c.high, Math.round(v))) : c.first;
       c.input.value = value[id]; c.show();
     }
+    for (var marker = 1; marker <= 5; marker++) MARKER_KNOBS.forEach(function (id) {      /* a preset from before MOD LEVEL has one value: each marker takes it */
+      var v = Number(values && values[id + marker]);
+      value[id + marker] = values && values[id + marker] !== undefined && isFinite(v) ? Math.max(0, Math.min(127, Math.round(v))) : value[id];
+    });
+    showMorph();
     send({ set: copy() }); setSpan(); drawPattern(); patternText(); redraw(true);
   }
   function localWrite() { try { localStorage.setItem(LOCAL, JSON.stringify(presets)); return true; } catch (e) { return false; } }
   function saveFailed(error) { console.error('DR1 Kick: the preset was not saved.', error && error.code); tell('The preset was not saved. Check your connection and try again.'); }
-  document.getElementById('preset-save').addEventListener('click', function () {
-    var name = presetName.value.trim(), id = slug(name), one = { name: name, values: copy(), savedAt: new Date().toISOString() };
-    if (!id) { tell('Give the preset a name with a letter or a digit.'); presetName.focus(); return; }
-    var was = presets.some(function (p) { return p.id === id; });
-    function done() { presetList.value = id; tell((was ? 'Replaced ' : 'Saved ') + '“' + name + '”.'); }
-    if (store) store.collection('presets').doc(id).set(one).then(done, saveFailed);
-    else {
-      presets = presets.filter(function (p) { return p.id !== id; }); one.id = id; presets.push(one);
-      if (localWrite()) { showPresets(); done(); } else tell('The preset was not saved. This browser does not let the page keep data.');
-    }
-  });
+  function byId(id) { for (var i = 0; i < presets.length; i++) if (presets[i].id === id) return presets[i]; return null; }
+  function savePreset(id, one) {      /* a promise: the preset is in the page's database, or in this browser */
+    presets = presets.filter(function (p) { return p.id !== id; }); presets.push({ id: id, name: one.name, values: one.values, savedAt: one.savedAt });
+    if (store) return store.collection('presets').doc(id).set(one);
+    return localWrite() ? Promise.resolve() : Promise.reject({ code: 'storage' });
+  }
+
+  /* ---- the working copies. Load opens a copy of a preset, and each change of a knob is saved in that copy (`work`, one for each preset, and one for the
+     kick with no preset). The saved preset changes only with Update Original. A preset has changes when it has a working copy ---- */
+  var work = {}, openId = '', NEW = '_new', LOCAL_WORK = 'dr1-kick-working', OPEN = 'dr1-kick-open';
+  var applying = false, touched = false, restored = false, gotPresets = false, gotWork = false, saveTimer = 0, saveBad = false;
+  var openText = document.getElementById('open-text'), updateButton = document.getElementById('preset-update'), revertButton = document.getElementById('preset-revert'), revertConfirm = document.getElementById('revert-confirm');
+  function workKey() { return openId || NEW; }
+  function showOpen() {
+    var one = byId(openId), changed = !!work[workKey()];
+    openText.textContent = one ? 'Open: a copy of “' + one.name + '”, ' + (changed ? 'with changes that are not in the saved preset.' : 'with no change.')
+      : 'No preset is open.' + (changed ? ' Your changes are kept.' : '');
+    updateButton.disabled = !one || !changed; revertButton.disabled = !changed; revertConfirm.hidden = true;
+  }
+  function localWorkWrite() { try { localStorage.setItem(LOCAL_WORK, JSON.stringify(work)); return true; } catch (e) { return false; } }
+  function writeWork(key, values) {
+    work[key] = { values: values, savedAt: new Date().toISOString() };
+    if (store) return store.collection('working').doc(key).set(work[key]);
+    return localWorkWrite() ? Promise.resolve() : Promise.reject({ code: 'storage' });
+  }
+  function dropWork(key) {
+    if (!work[key]) return Promise.resolve();
+    delete work[key];
+    if (store) return store.collection('working').doc(key).delete();
+    localWorkWrite(); return Promise.resolve();
+  }
+  function autoSave() {
+    saveTimer = 0;
+    writeWork(workKey(), copy()).then(function () { if (saveBad) { saveBad = false; tell('Your changes are saved again.'); } },
+      function (error) { console.error('DR1 Kick: the changes were not saved.', error && error.code); if (!saveBad) { saveBad = true; tell('Your changes were not saved. Check your connection.'); } });
+  }
+  function changedByHand() {      /* from send(): a knob moved. The copy is written 0.8 s after the first move, not at each step of a slider */
+    if (applying) return;
+    touched = true;
+    if (!work[workKey()]) { work[workKey()] = { values: null }; showOpen(); }
+    if (!saveTimer) saveTimer = setTimeout(autoSave, 800);
+  }
+  function saveNow() { if (saveTimer) { clearTimeout(saveTimer); autoSave(); } }
+  function forgetSave() { clearTimeout(saveTimer); saveTimer = 0; }
+  function remember() { try { localStorage.setItem(OPEN, openId); } catch (e) { /* no storage: the page opens with no preset */ } }
+  function openCopy(id) {      /* the working copy of a preset when it has one, or else the preset as it was saved; '' is the kick with no preset */
+    saveNow(); openId = id; remember();
+    var one = byId(id), kept = work[workKey()];
+    applying = true; applyPreset(kept && kept.values ? kept.values : one ? one.values : null); applying = false;
+    showOpen();
+  }
+  function restore() {      /* once, when the presets and the copies are here: the page opens as you left it */
+    if (restored || (store && !(gotPresets && gotWork))) return;
+    restored = true;
+    var id = '';
+    try { id = localStorage.getItem(OPEN) || ''; } catch (e) { /* no storage */ }
+    if (!byId(id)) id = '';
+    if (!touched && (id || (work[NEW] && work[NEW].values))) openCopy(id); else showOpen();
+  }
+
   document.getElementById('preset-load').addEventListener('click', function () {
     var one = chosen(); if (!one) return;
-    applyPreset(one.values); presetName.value = one.name; tell('Loaded “' + one.name + '”.');
+    openCopy(one.id); tell('Loaded a copy of “' + one.name + '”.' + (work[one.id] ? ' It has your changes from before.' : ''));
+  });
+  updateButton.addEventListener('click', function () {
+    var one = byId(openId); if (!one) return;
+    forgetSave();
+    savePreset(one.id, { name: one.name, values: copy(), savedAt: new Date().toISOString() }).then(function () { return dropWork(one.id); })
+      .then(function () { showPresets(); tell('Updated “' + one.name + '”.'); }, saveFailed);
+  });
+  document.getElementById('preset-save').addEventListener('click', function () {
+    var name = presetName.value.trim(), id = slug(name), from = workKey();
+    if (!id) { tell('Give the preset a name with a letter or a digit.'); presetName.focus(); return; }
+    if (byId(id)) { tell('A preset has this name. Give another name, or use Update Original.'); presetName.focus(); return; }
+    forgetSave();
+    savePreset(id, { name: name, values: copy(), savedAt: new Date().toISOString() }).then(function () { return dropWork(from); })      /* the changes go to the new preset: the one they came from is as it was saved */
+      .then(function () { openId = id; remember(); showPresets(); presetList.value = id; presetName.value = ''; tell('Created “' + name + '”. It is the open preset now.'); }, saveFailed);
+  });
+  revertButton.addEventListener('click', function () { revertConfirm.hidden = false; document.getElementById('revert-no').focus(); });
+  document.getElementById('revert-no').addEventListener('click', function () { revertConfirm.hidden = true; revertButton.focus(); });
+  document.getElementById('revert-yes').addEventListener('click', function () {
+    var one = byId(openId);
+    forgetSave();
+    dropWork(workKey()).then(function () {
+      applying = true; applyPreset(one ? one.values : null); applying = false;
+      showOpen(); tell(one ? 'Reverted to “' + one.name + '” as it was saved.' : 'Reverted to the first values.'); document.getElementById('preset-load').focus();
+    }, function (error) { console.error('DR1 Kick: the copy was not removed.', error && error.code); tell('The changes were not reverted. Check your connection and try again.'); });
   });
   document.getElementById('preset-delete').addEventListener('click', function () { if (chosen()) { presetConfirm.hidden = false; document.getElementById('preset-no').focus(); } });
   document.getElementById('preset-no').addEventListener('click', function () { presetConfirm.hidden = true; document.getElementById('preset-delete').focus(); });
   presetList.addEventListener('change', function () { presetConfirm.hidden = true; });
   document.getElementById('preset-yes').addEventListener('click', function () {
     var one = chosen(); if (!one) return;
-    function done() { tell('Deleted “' + one.name + '”.'); presetList.focus(); }
+    function done() {      /* its working copy goes with it; when it was the open preset, the knobs stay and no preset is open */
+      if (openId === one.id) { forgetSave(); openId = ''; remember(); }
+      dropWork(one.id).then(null, function (error) { console.error('DR1 Kick: the copy was not removed.', error && error.code); });
+      presets = presets.filter(function (p) { return p.id !== one.id; }); showPresets(); tell('Deleted “' + one.name + '”.'); presetList.focus();
+    }
     if (store) store.collection('presets').doc(one.id).delete().then(done, function (error) { console.error('DR1 Kick: the preset was not deleted.', error && error.code); tell('The preset was not deleted. Check your connection and try again.'); });
-    else { presets = presets.filter(function (p) { return p.id !== one.id; }); localWrite(); showPresets(); done(); }
+    else { presets = presets.filter(function (p) { return p.id !== one.id; }); localWrite(); done(); }
   });
   function localPresets() {
     try { presets = (JSON.parse(localStorage.getItem(LOCAL)) || []).filter(function (p) { return p && p.id && p.name; }); } catch (e) { presets = []; }
-    presetNote = 'The presets stay in this browser only.'; showPresets(); tell('');
+    try { work = JSON.parse(localStorage.getItem(LOCAL_WORK)) || {}; } catch (e) { work = {}; }
+    presetNote = 'The presets stay in this browser only.'; showPresets(); tell(''); restore();
   }
   showPresets(); tell('Loading the presets…');
   (window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null)).then(function (db) {
     if (!db) { localPresets(); return; }
     store = db;
     var slow = setTimeout(function () { tell('The presets cannot be reached yet.'); }, 10000), firstAnswer = true;
+    function failed(error) {
+      clearTimeout(slow); console.error('DR1 Kick: the presets did not load.', error && error.code);
+      if (!store) return;
+      store = null; localPresets(); tell('The presets of the page did not load.');
+    }
     db.collection('presets').onSnapshot(function (snap) {
       presets = snap.docs.map(function (doc) { var body = doc.data() || {}; return { id: doc.id, name: String(body.name || doc.id).slice(0, 40), values: body.values }; });
       showPresets();
-      if (!snap.metadata.fromCache) { clearTimeout(slow); if (firstAnswer) { firstAnswer = false; tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Save.'); } }
-    }, function (error) {
-      clearTimeout(slow); console.error('DR1 Kick: the presets did not load.', error && error.code);
-      store = null; localPresets(); tell('The presets of the page did not load.');
-    });
+      if (!snap.metadata.fromCache) { clearTimeout(slow); gotPresets = true; restore(); if (firstAnswer) { firstAnswer = false; tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Create New Preset.'); } }
+    }, failed);
+    db.collection('working').onSnapshot(function (snap) {      /* the copies, as the database has them; the one in hand stays as the page has it */
+      var fresh = {}, mine = work[workKey()];
+      snap.docs.forEach(function (doc) { fresh[doc.id] = doc.data() || {}; });
+      if (restored) { if (mine) fresh[workKey()] = mine; else delete fresh[workKey()]; }
+      work = fresh; showOpen();
+      if (!snap.metadata.fromCache) { gotWork = true; restore(); }
+    }, failed);
   }, localPresets);
 
   var first = 'body';
