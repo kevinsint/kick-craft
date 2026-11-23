@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kick Craft</title>
+<meta name="description" content="A kick drum to shape in the browser: a body, a click and a rumble, each with its own level and attack.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Kevin Sint */
+[hidden] { display: none !important; }
+/* Layout: one column, one left edge. The instrument first and in one screen: the wave, the tabs, the knobs of one tab. The text on how it is built comes after. */
+:root {
+  --bg: #eef0f2; --fg: #15191d; --muted: #4d5862; --line: #c3cad1; --surface: #ffffff; --accent: #8a5200;
+  --dev: #1b1d20; --dev-edge: #737b84; --dev-text: #dfe3e7; --dev-muted: #a9b1b9; --lit: #ffa400; --layer: #5adee6;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --s1: 0.5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2.5rem;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111417; --fg: #e8eaec; --muted: #a3adb6; --line: #333b43; --surface: #1a1e22; --accent: #ffb74a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111417; --fg: #e8eaec; --muted: #a3adb6; --line: #333b43; --surface: #1a1e22; --accent: #ffb74a; color-scheme: dark }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: var(--s2) var(--s4); }
+.page { max-width: 74rem; margin: 0 auto; display: grid; gap: var(--s4); }
+.page > * { min-width: 0; }
+h1, h2, h3 { font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 1.5rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.125rem; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); font-size: 1.125rem; }
+section { display: grid; gap: var(--s2); }
+.mono { font-family: var(--mono); }
+ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-width: 68ch; }
+:focus-visible { outline: 3px solid var(--layer); outline-offset: 2px; }
+.page :focus-visible { outline-color: var(--accent); }
+.device :focus-visible { outline-color: var(--layer); }
+.hidden-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.instrument { gap: var(--s1); }
+.top { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: baseline; justify-content: space-between; }
+.version { font: 600 1rem var(--mono); background: var(--fg); color: var(--bg); padding: 2px 12px; border-radius: 6px; }
+
+.device { background: var(--dev); color: var(--dev-text); border-radius: 12px; padding: var(--s2); display: grid; gap: var(--s2); }
+.device > * { min-width: 0; }
+.stack { display: grid; gap: var(--s2); }
+.row { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: center; }
+.btn { font: 600 1rem var(--sans); min-height: 44px; padding: 0 var(--s2); border-radius: 6px; border: 2px solid var(--dev-text);
+  background: transparent; color: var(--dev-text); cursor: pointer; }
+.btn.main { background: var(--lit); border-color: var(--lit); color: #15191d; }
+.btn[aria-pressed="true"] { background: var(--dev-text); color: var(--dev); }
+.sees { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.see { font-family: var(--mono); padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; border-style: dashed; border-color: var(--dev-edge); color: var(--dev-muted); }
+.see .line { width: 18px; border-top: 3px solid var(--c, currentColor); }
+.see .line.dash { border-top-style: dashed; }
+.see[aria-pressed="true"] { background: #000; color: var(--c, var(--dev-text)); border-style: solid; border-color: var(--c, var(--dev-text)); }
+.see[aria-pressed="true"]::after { content: "\2713" / ""; }
+.presets { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: end; }
+.field { display: grid; gap: 2px; font-weight: 600; min-width: 0; }
+.field input, .field select { font: 1rem var(--mono); min-height: 44px; min-width: 14rem; max-width: 100%; box-sizing: border-box; background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; padding: 0 var(--s1); }
+.btn.danger { border-color: #ff8a80; color: #ff8a80; }
+.btn:disabled { border-style: dashed; border-color: var(--dev-edge); color: var(--dev-muted); background: transparent; cursor: default; }
+.pick { display: flex; align-items: center; gap: var(--s1); font-weight: 600; }
+.pick select, .knob select { font: 1rem var(--mono); min-height: 44px; background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; padding: 0 var(--s1); }
+.device .hint { color: var(--dev-muted); }
+
+/* the wave stays in view while the page scrolls on a small screen */
+.wave { background: var(--dev); display: grid; gap: 4px; padding-block: 4px; }
+@media (min-height: 640px) {
+  .wave { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; }
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + clamp(10rem, 24vh, 24rem) + 5rem); }
+}
+.scope { position: relative; height: clamp(10rem, 24vh, 24rem); border: 2px solid var(--dev-edge); border-radius: 4px; background: #000; }
+.scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scope #cursor { pointer-events: none; }
+.readout { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--dev-muted); min-height: 1.55rem; max-width: none; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: var(--s1); border-bottom: 2px solid var(--dev-edge); }
+.tab { font: 600 1rem var(--mono); min-height: 44px; padding: 0 var(--s3); border: 2px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0;
+  background: transparent; color: var(--dev-muted); cursor: pointer; }
+.tab[aria-selected="true"] { color: #15191d; background: var(--layer); }
+.tab[aria-selected="true"]::before { content: "\25CF\00A0" / ""; }
+.knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--s1) var(--s2); }
+.knob { display: grid; gap: 0; font-family: var(--mono); min-width: 0; align-content: start; }
+.knob .head { display: flex; flex-wrap: wrap; gap: 0 var(--s1); }
+.knob .name, .knob output { color: var(--lit); font-weight: 600; }
+.knob .where { color: var(--dev-muted); margin-left: auto; }
+.knob input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--lit); }
+canvas#pattern { display: block; width: 100%; height: auto; background: #000; border: 2px solid var(--dev-edge); border-radius: 4px; }
+
+.path { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: stretch; margin: 0; padding: 0; list-style: none; }
+.path li { flex: 1 1 12rem; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: var(--s1) var(--s2); display: grid; gap: 2px; align-content: start; }
+.path .step { font-weight: 600; }
+.path .ctl { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; vertical-align: top; padding: var(--s1) var(--s2) var(--s1) 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); }
+td:first-child { font-family: var(--mono); font-weight: 600; }
+@media (max-width: 720px) {
+  table, tbody, tr, td { display: block; }
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  tr { border: 1px solid var(--line); border-radius: 6px; padding: var(--s1) var(--s2); margin-bottom: var(--s1); background: var(--surface); }
+  td { border: 0; padding: 4px 0; }
+  td:not(:first-child)::before { content: attr(data-label) ": "; font-weight: 600; color: var(--muted); }
+}
+.choice { border-left: 4px solid var(--accent); padding-left: var(--s2); display: grid; gap: 4px; max-width: 68ch; }
+.choice strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="instrument" aria-labelledby="h-title">
+    <div class="top">
+      <h1 id="h-title">Kick Craft</h1>
+      <p class="version">Draft 24</p>
+    </div>
+    <div class="device">
+      <div class="row">
+        <button class="btn main" id="hit" type="button" aria-keyshortcuts="K">Hit</button>
+        <button class="btn" id="run" type="button" aria-pressed="false">Run LFO</button>
+        <button class="btn" id="drone" type="button" aria-pressed="false">Drone</button>
+        <button class="btn" id="solo" type="button" aria-pressed="false">Solo Tab</button>
+        <label class="pick" for="span">Show <select id="span">
+          <option value="0.00390625">1/256</option><option value="0.0078125">1/128</option><option value="0.015625">1/64</option><option value="0.03125">1/32</option>
+          <option value="0.0625">1/16</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option>
+          <option value="1">1 BAR</option><option value="2">2 BARS</option></select></label>
+        <div class="sees" role="group" aria-label="Waves in the picture">
+          <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Tab</button>
+          <button class="btn see" id="see-all" type="button" aria-pressed="true" style="--c:#b4bcc4"><span class="line"></span>ALL</button>
+          <button class="btn see" id="see-body" type="button" aria-pressed="true" style="--c:#5adee6"><span class="line"></span>BODY</button>
+          <button class="btn see" id="see-click" type="button" aria-pressed="false" style="--c:#ff8ad8"><span class="line"></span>CLICK</button>
+          <button class="btn see" id="see-rumble" type="button" aria-pressed="false" style="--c:#8be36b"><span class="line"></span>RUMBLE</button>
+          <button class="btn see" id="see-pitch" type="button" aria-pressed="true" style="--c:#ffa400"><span class="line dash"></span>PITCH</button>
+          <button class="btn see" id="see-head" type="button" aria-pressed="true">Playhead</button>
+        </div>
+      </div>
+      <div class="wave">
+        <div class="scope">
+          <canvas id="scope" role="img" tabindex="0" aria-label="One hit of the kick from silence. The buttons above choose the waves: all the layers in grey, the body in blue, the click in pink, the rumble in green, the pitch as an amber dashed line. A line moves over the picture while a hit plays, when Playhead is on. The Left and Right arrow keys move the point that is read." aria-describedby="status"></canvas>
+          <canvas id="cursor" aria-hidden="true"></canvas>
+        </div>
+        <p class="readout"><span id="readout"></span> <span id="engine" role="status"></span></p>
+        <p class="hidden-text" id="status"></p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="The kick’s layers">
+        <button class="tab" role="tab" type="button" id="tab-body" aria-controls="panel-body" aria-selected="true">BODY</button>
+        <button class="tab" role="tab" type="button" id="tab-click" aria-controls="panel-click" aria-selected="false" tabindex="-1">CLICK</button>
+        <button class="tab" role="tab" type="button" id="tab-rumble" aria-controls="panel-rumble" aria-selected="false" tabindex="-1">RUMBLE</button>
+        <button class="tab" role="tab" type="button" id="tab-lfo" aria-controls="panel-lfo" aria-selected="false" tabindex="-1">LFO</button>
+        <button class="tab" role="tab" type="button" id="tab-presets" aria-controls="panel-presets" aria-selected="false" tabindex="-1">PRESETS</button>
+      </div>
+      <div role="tabpanel" id="panel-body" aria-labelledby="tab-body"><div class="knobs" id="kick"></div></div>
+      <div role="tabpanel" id="panel-click" aria-labelledby="tab-click" hidden><div class="knobs" id="click"></div></div>
+      <div role="tabpanel" id="panel-rumble" aria-labelledby="tab-rumble" hidden><div class="knobs" id="rumble"></div></div>
+      <div role="tabpanel" id="panel-lfo" aria-labelledby="tab-lfo" hidden>
+        <div class="stack">
+          <div class="knobs" id="lfo"></div>
+          <canvas id="pattern" width="720" height="36" role="img" aria-label="The LFO’s pattern, one cell for each step." aria-describedby="pattern-text"></canvas>
+          <p class="hint">The LFO here is a GATE at 4 steps a beat, with the Euclidean pattern of the bank: TRIGS of the STEPS play. The lit cell is the step now. <span id="pattern-text"></span></p>
+        </div>
+      </div>
+      <div role="tabpanel" id="panel-presets" aria-labelledby="tab-presets" hidden>
+        <div class="stack">
+          <div class="presets">
+            <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
+            <button class="btn main" id="preset-save" type="button">Save</button>
+            <div class="field"><label for="preset-list">Saved Presets</label><select id="preset-list"></select></div>
+            <button class="btn" id="preset-load" type="button">Load</button>
+            <button class="btn danger" id="preset-delete" type="button">Delete…</button>
+            <span class="row" id="preset-confirm" hidden>
+              <button class="btn danger" id="preset-yes" type="button">Delete Preset</button>
+              <button class="btn" id="preset-no" type="button">Cancel</button>
+            </span>
+          </div>
+          <p class="hint" id="preset-status" role="status"></p>
+          <p class="hint">A preset keeps every knob of BODY, CLICK, RUMBLE and LFO. Save with the name of a saved preset to replace it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-what">
+    <h2 id="h-what">What it is</h2>
+    <p class="lede">A kick drum on OP6. It has three layers, and each one has its own attack. The body and the click are two oscillators of the same kind, with the controls of the Shakmat Battering Ram: a pitch, a sweep of the pitch, a decay. The click is the short one. The rumble comes up after each hit, as on the Ohmforce Bohm. Any LFO of the bank plays it.</p>
+    <p>This page plays the same algorithm in your browser, sample by sample. “Show” sets the length of the picture as a part of a bar at the TEMPO, as the rumble’s LENGTH does, and the lines of the picture are parts of a bar too. The <span class="mono">K</span> key hits the kick while a control of the instrument has the focus. It stays as a web app when the kick is in the FM-1.</p>
+  </section>
+
+  <section aria-labelledby="h-ram">
+    <h2 id="h-ram">What the Battering Ram does</h2>
+    <p>From its manual (Shakmat, 8 pages). The manual names the controls and their effect; it does not give the circuit, the wave or the curves.</p>
+    <table>
+      <thead><tr><th>Control</th><th>In the manual</th><th>In this kick</th></tr></thead>
+      <tbody>
+        <tr><td>Pitch</td><td data-label="In the manual">C1 to C3, C2 in the middle. C0 to C5 as an option. A V/oct input.</td><td data-label="In this kick">The same: C1 to C3 by notes, C0 to C5 with OCT+ held.</td></tr>
+        <tr><td>Decay</td><td data-label="In the manual">The length of the decay.</td><td data-label="In this kick">The level falls to nothing in 50 ms to 3 s.</td></tr>
+        <tr><td>Click</td><td data-label="In the manual">The amount of envelope applied to the pitch: a clicky transient.</td><td data-label="In this kick">Named SWEEP here: how far the pitch starts above the note, 0 to 5 octaves. The body has one and the click has one.</td></tr>
+        <tr><td>Depth</td><td data-label="In the manual">The decay of the pitch envelope. At its minimum, very clicky; higher, as a 909 kick.</td><td data-label="In this kick">The time the pitch takes to fall to the note: 4 ms to 180 ms.</td></tr>
+        <tr><td>Drive</td><td data-label="In the manual">Two types: a two-stage wavefolder (harmonics and compression), or close to clipping.</td><td data-label="In this kick">FOLD: two stages, a soft top that compresses, then a fold. CLIP: a flat top. A third type, CRUSH, is from the Bohm.</td></tr>
+        <tr><td>Level, velocity</td><td data-label="In the manual">A level, and a velocity input read at the trigger.</td><td data-label="In this kick">A LEVEL for each layer: the body, the click, the rumble. No velocity in the first version.</td></tr>
+        <tr><td>Trigger, gate</td><td data-label="In the manual">Plays on a rising edge. Gate mode adds a hold stage to the envelopes.</td><td data-label="In this kick">Plays when the LFO goes up through 1 V. No gate mode in the first version.</td></tr>
+        <tr><td>HPF</td><td data-label="In the manual">A 3rd-order low cut at 30 Hz.</td><td data-label="In this kick">The same, on or off.</td></tr>
+        <tr><td>Envelope out</td><td data-label="In the manual">The amplitude envelope, or its inverse, for ducking.</td><td data-label="In this kick">DUCK: the envelope, upside down, on the three voices.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="h-bohm">
+    <h2 id="h-bohm">What the Bohm adds</h2>
+    <p>From the Ohmforce Bohm’s manual and a review. The Bohm is a digital kick with nine models; its manual names the controls and not the algorithms. I took its ideas, not its sound.</p>
+    <table>
+      <thead><tr><th>In the Bohm</th><th>What it does there</th><th>In this kick</th></tr></thead>
+      <tbody>
+        <tr><td>Two sources</td><td data-label="What it does there">An oscillator for the kick and a transient synthesizer, mixed.</td><td data-label="In this kick">Two oscillators of the same kind: one for the body, one for the click. The click has its own note, its own sweep, its own attack and a short decay.</td></tr>
+        <tr><td>ATTACK on FM-2X</td><td data-label="What it does there">On the two-operator model: the amount of FM.</td><td data-label="In this kick">The click’s mode. MIX: beside the body. FM: it bends the body at the hit. RING: it multiplies it.</td></tr>
+        <tr><td>TRS DECAY, TRS TONE</td><td data-label="What it does there">The transient’s length and its filter, dark to bright.</td><td data-label="In this kick">SNAP: the click’s decay. NOISE and TONE: a burst of noise with it, dark to bright.</td></tr>
+        <tr><td>Groove</td><td data-label="What it does there">A second voice under the kick: repeats of the kick, a reverb, a noise and a gritty sub, with its own length, pitch and effects.</td><td data-label="In this kick">RUMBLE: the kick goes into a small dark reverb, then a low-pass and a drive. Each hit pushes it down, and it comes back up in its own ATTACK time.</td></tr>
+        <tr><td>ATTACK, SUSTAIN, LENGTH</td><td data-label="What it does there">The level’s envelope.</td><td data-label="In this kick">One ATTACK for each layer. The body: 1 ms to 400 ms, with a curve of its own. The click: 0 to 51 ms. The rumble: 5 ms to 1 s. No sustain: that is the gate mode, not in the first version.</td></tr>
+        <tr><td>CURVE</td><td data-label="What it does there">The shape of the pitch’s fall, from an 808’s to a 909’s.</td><td data-label="In this kick">PITCH CURVE, one for the body and one for the click: from a slow round fall to a fast snap.</td></tr>
+        <tr><td>FX</td><td data-label="What it does there">Tube, soft and hard clip, wavefold, bitcrush, decimate.</td><td data-label="In this kick">DRIVE with three types: FOLD, CLIP and CRUSH.</td></tr>
+        <tr><td>DUCK</td><td data-label="What it does there">The kick lowers the sound that comes in.</td><td data-label="In this kick">DUCK: each hit lowers the three drone voices, and they come back with the body’s decay.</td></tr>
+        <tr><td>Taps, stereo</td><td data-label="What it does there">Repeats of the kick on the clock, each with its level; stereo effects.</td><td data-label="In this kick">Not taken. A RATCHET shape on the LFO gives the repeats.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="h-build">
+    <h2 id="h-build">How I would build it</h2>
+    <p>One hit, from the trigger to the output. The amber name is the control for that step.</p>
+    <ol class="path">
+      <li><span class="step">1. Trigger</span><span class="ctl">ALGORITHM: the LFO</span><span>The chosen LFO goes up through 1 V. The two oscillators start again at the same place, so each hit is the same. The hit before fades in 2 ms. The rumble does not start again: its tail goes on under the next hit.</span></li>
+      <li><span class="step">2. Pitch envelope</span><span class="ctl">SWEEP, DEPTH, PITCH CURVE</span><span>The body’s pitch starts SWEEP octaves above the note and falls to it in the DEPTH time, with the shape of its PITCH CURVE.</span></li>
+      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 2.5 kHz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 320 ms.</span></li>
+      <li><span class="step">4. Body oscillator</span><span class="ctl">SELECT: the note, PHASE</span><span>A sine at the note plus the pitch envelope. PHASE is where in its cycle it starts, 0 to 357 degrees: at 0 it starts soft, at 90 with a hard edge, at 180 it goes down first. In FM mode the click bends it; in RING mode the click multiplies it.</span></li>
+      <li><span class="step">5. Noise</span><span class="ctl">NOISE, TONE</span><span>A burst of 15 ms at the hit, through a low-pass filter. It is part of the click, but the click’s ATTACK does not move it.</span></li>
+      <li><span class="step">6. Body level</span><span class="ctl">ATTACK, ATK CURVE, DECAY</span><span>The DECAY starts at the hit and does not move. The ATTACK only cuts the start of the body, for 1 ms to 400 ms, so the click has the room; after that time the wave is the same as with no attack. ATK CURVE is the shape of the cut: the body stays low and comes up at the end (127), a straight line (42), or up at once (0).</span></li>
+      <li><span class="step">7. Drive</span><span class="ctl">DRIVE, FOLD, CLIP or CRUSH</span><span>After the envelope: the tail gets cleaner as it falls. In MIX mode the click and the noise go round it, so a loud body does not flatten them. In FM and RING the click is inside the body and takes the drive.</span></li>
+      <li><span class="step">8. Low cut</span><span class="ctl">HPF</span><span>30 Hz, 3rd order.</span></li>
+      <li><span class="step">9. Three levels, then the mix</span><span class="ctl">LEVEL of each layer</span><span>The body, the click and the rumble each have a LEVEL. No level moves another layer: with the body at 0 you hear the click and the rumble alone. Then the sum, in the centre, before the compressor.</span></li>
+      <li><span class="step">10. Rumble</span><span class="ctl">LEVEL, ATTACK, DELAY, REVERB, LENGTH, DARK, GRIT, PHASE, LFO</span><span>The kick after its drive, before the body’s LEVEL, goes into four short echoes that feed themselves (a small reverb), then a low-pass at DARK and a drive of its own. Each hit pushes it down, and it comes up again in its ATTACK time, 5 ms to 1 s. PHASE makes it later by up to one cycle of the body’s note, so its lows add to the body or take from it. LENGTH is how long the rumble lasts after a hit, as a part of a bar at the tempo: 1/16, 1/8, 1/4, 1/2, 1 bar, 2 bars or 4 bars. The echoes fall to nothing in that time, and the rumble is closed at its end, so it stops on the clock. A new hit starts the count again. DELAY puts repeats of the kick before the echoes: DLY TIME, a part of a bar at the tempo from 1/64 to 1/2, with triplets (T) and dotted values (D), and DLY BACK, how long they go on. REVERB at 0 takes the echoes out, so the low-pass has the kick and its repeats only. An LFO moves the rumble’s LEVEL (down to silence) and its DARK (up to 2 octaves each way); one cycle of it is 4 bars to 1/32 of a bar.</span></li>
+      <li><span class="step">11. Duck</span><span class="ctl">DUCK</span><span>The body’s level envelope, upside down, lowers OP1 to OP3.</span></li>
+    </ol>
+    <h3>The trigger: 1 V, going up</h3>
+    <ul class="plain">
+      <li>An LFO’s full height is 5 V, as on the module your LFO text comes from. So 1 V is 20 % of the height, after the LFO’s LEVEL and OFFSET.</li>
+      <li>The kick plays when the LFO goes from below 20 % to 20 % or above. It can play again only after the LFO was below 20 %.</li>
+      <li>An LFO with RANGE at BOTH goes below zero: only its way up through +20 % plays the kick.</li>
+      <li>The bank moves 172 times a second, which is 5.8 ms between two moves. That is too coarse for a kick. So the engine finds where in those 5.8 ms the LFO started its step or crossed the level, and starts the kick on that sample.</li>
+      <li>All that an LFO has makes the rhythm: the ratio to the clock, the Euclidean pattern, PROB, the loop, the naps. A RATCHET gives rolls. An amount from another LFO on TRIGS changes the pattern as it plays.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-panel">
+    <h2 id="h-panel">The controls on the FM-1</h2>
+    <p>OP6 becomes the kick’s key. A short press turns the kick on or off. Hold it 1 second to select it: the page is then the kick’s page, as for OP1 to OP3.</p>
+    <p>On this page K1 to K4 are KNOB1 to KNOB4, and ALGO is ALGORITHM.</p>
+    <p>The kick has three sets of knobs, as the LFO page has: the white keys 13, 14 and 15 choose BODY, CLICK or RUMBLE. The white keys 1 to 12 hit the kick by hand.</p>
+    <table>
+      <thead><tr><th>Control</th><th>Alone</th><th>With OCT- held</th></tr></thead>
+      <tbody>
+        <tr><td>SELECT</td><td data-label="Alone">PITCH, by notes: C1 to C3.</td><td data-label="With OCT- held">The same.</td></tr>
+        <tr><td>OCT+ held, SELECT</td><td data-label="Alone">PITCH by octaves: C0 to C5.</td><td data-label="With OCT- held">The same.</td></tr>
+        <tr><td>OCT+ pressed</td><td data-label="Alone">HPF on or off, when SELECT did not turn while it was down.</td><td data-label="With OCT- held">The same.</td></tr>
+        <tr><td>ALGORITHM, BODY</td><td data-label="Alone">TRIG: OFF, or LFO 1 to 12.</td><td data-label="With OCT- held">The drive’s type: FOLD, CLIP or CRUSH.</td></tr>
+        <tr><td>ALGORITHM, CLICK</td><td data-label="Alone">The click’s mode: MIX, FM or RING.</td><td data-label="With OCT- held">The drive’s type.</td></tr>
+        <tr><td>ALGORITHM, RUMBLE</td><td data-label="Alone">TRIG, as with BODY.</td><td data-label="With OCT- held">The drive’s type.</td></tr>
+        <tr><td>LFO held</td><td data-label="Alone">The amounts of an LFO on the four values of the set in hand; PRESETS: on the pitch.</td><td data-label="With OCT- held">1 a click.</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Set</th><th>KNOB1</th><th>KNOB2</th><th>KNOB3</th><th>KNOB4</th></tr></thead>
+      <tbody>
+        <tr><td>BODY</td><td data-label="KNOB1">LEVEL: the body’s volume</td><td data-label="KNOB2">DECAY</td><td data-label="KNOB3">SWEEP</td><td data-label="KNOB4">DRIVE</td></tr>
+        <tr><td>BODY, OCT- held</td><td data-label="KNOB1">ATTACK: the body’s</td><td data-label="KNOB2">DEPTH</td><td data-label="KNOB3">PHASE: where the body’s wave starts</td><td data-label="KNOB4">PITCH CURVE: the body’s</td></tr>
+        <tr><td>BODY, OCT+ held</td><td data-label="KNOB1">ATK CURVE: the shape of the body’s attack</td><td data-label="KNOB2">Free</td><td data-label="KNOB3">Free</td><td data-label="KNOB4">Free</td></tr>
+        <tr><td>CLICK</td><td data-label="KNOB1">LEVEL: the click’s volume, with its noise</td><td data-label="KNOB2">TUNE: its pitch</td><td data-label="KNOB3">SNAP: its length</td><td data-label="KNOB4">SWEEP: how far its pitch starts above TUNE</td></tr>
+        <tr><td>CLICK, OCT- held</td><td data-label="KNOB1">NOISE: how much</td><td data-label="KNOB2">ATTACK: the click’s</td><td data-label="KNOB3">SNAP in the smallest steps</td><td data-label="KNOB4">TONE: the noise, dark to bright</td></tr>
+        <tr><td>CLICK, OCT+ held</td><td data-label="KNOB1">PITCH CURVE: the click’s</td><td data-label="KNOB2">Free</td><td data-label="KNOB3">Free</td><td data-label="KNOB4">Free</td></tr>
+        <tr><td>RUMBLE</td><td data-label="KNOB1">LEVEL: the rumble’s volume</td><td data-label="KNOB2">LENGTH: the tail’s length on the clock, 1/16 of a bar to 4 bars</td><td data-label="KNOB3">DARK: its low-pass, 50 to 400 Hz</td><td data-label="KNOB4">GRIT: its own drive</td></tr>
+        <tr><td>RUMBLE, OCT+ held</td><td data-label="KNOB1">REVERB: how much of the echoes</td><td data-label="KNOB2">DELAY: how much of the repeats</td><td data-label="KNOB3">DLY TIME</td><td data-label="KNOB4">DLY BACK</td></tr>
+        <tr><td>RUMBLE, LFO held</td><td data-label="KNOB1">LFO LEVEL: the LFO’s amount on LEVEL</td><td data-label="KNOB2">On LENGTH</td><td data-label="KNOB3">LFO DARK: the LFO’s amount on DARK</td><td data-label="KNOB4">On GRIT</td></tr>
+        <tr><td>RUMBLE, OCT- held</td><td data-label="KNOB1">PHASE: the rumble against the body</td><td data-label="KNOB2">ATTACK: the rumble’s</td><td data-label="KNOB3">DARK in the smallest steps</td><td data-label="KNOB4">DUCK: how much the drones go down</td></tr>
+      </tbody>
+    </table>
+    <p>The screen: the picture of one hit (its wave and its pitch, as above), which flashes on each hit; the note and the trigger’s LFO at the top; the four dials; a fourth box for the kick beside the three voices.</p>
+  </section>
+
+  <section aria-labelledby="h-choices">
+    <h2 id="h-choices">Choices and limits</h2>
+    <div class="choice"><strong>The sound engine runs sample by sample.</strong><span>The browser plays the kick in its audio thread, at twice the sample rate, then filters it down, so the drive and the click make less false tone. The hits of the LFO land on the exact sample. A knob changes the sound while it plays.</span></div>
+    <div class="choice"><strong>The picture is the engine’s own output.</strong><span>The playhead shows where the sound is in the picture, from the audio clock. The picture is one hit from silence, so with the LFO on, the tail of the hit before is in the sound and not in the picture. The wave is one hit from silence, computed at 96 000 samples a second by the same code that makes the sound. Below one sample a pixel, each sample has its dot.</span></div>
+    <div class="choice"><strong>Three volumes, and KNOB1 is the volume in each set.</strong><span>The body’s LEVEL at 0 leaves the click and the rumble as they are. The click’s LEVEL also moves its noise. In FM and RING the click is inside the body: its LEVEL is then how much it bends or multiplies the body, and a silent body silences it.</span></div>
+    <div class="choice"><strong>The kick is not a style.</strong><span>It is a fourth voice with its own small engine, not a patch of blocks. It costs two sines, four envelopes, a noise and the rumble’s four echoes, less than a voice.</span></div>
+    <div class="choice"><strong>The wave and the curves are mine.</strong><span>The manual does not give them. I use a sine and curves that fall fast, then slowly, which is the common way to make this kind of kick. The ranges in the table above are a first estimate, to tune by ear on this page.</span></div>
+    <div class="choice"><strong>The drive is after the level envelope.</strong><span>The manual does not say where it is. After the envelope, the drive acts as a compressor on the start of the hit, which is what the manual describes.</span></div>
+    <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
+    <div class="choice"><strong>The rumble’s attack is its own.</strong><span>Before, the rumble came up as the body went down. Now a long body can have a fast rumble, and a short body a slow one.</span></div>
+    <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a part of a bar at the tempo, it has three shapes, and it starts its cycle when you start the LFO of the trigger. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
+    <div class="choice"><strong>The delay and the reverb are the rumble’s own.</strong><span>They are not the DR1’s delay and reverb, and the body and the click do not go to the output through them. The delay needs memory in the firmware: half a bar at 40 BPM is 3 s, about 16 500 samples at one eighth of the sample rate.</span></div>
+    <div class="choice"><strong>The rumble is cheap.</strong><span>It is below 400 Hz, so the firmware can run it at one eighth of the sample rate: four echoes of about 300 samples each.</span></div>
+    <div class="choice"><strong>The rumble takes the kick, not the drones.</strong><span>The drones have the DR1’s delay and reverb. A send from the drones into the rumble is possible later.</span></div>
+    <div class="choice"><strong>DUCK lowers the three voices, not the delay and the reverb.</strong><span>The echoes and the tail stay up while the drones go down.</span></div>
+    <div class="choice"><strong>Ideas I did not put in.</strong><span>A drone voice as the kick’s FM source, so that the kick takes the colour of OP3. Velocity from the height of the LFO at the hit. A gate mode that holds the kick while the LFO is up.</span></div>
+    <div class="choice"><strong>No mixer strip in the first version.</strong><span>The kick has a level, sits in the centre and has no sends to the delay or the reverb. A fourth strip in the mixer is a second step.</span></div>
+    <div class="choice"><strong>OP4 and OP5 stay free.</strong><span>The same trigger can play other drums there later.</span></div>
+    <div class="choice"><strong>The processor’s load is not measured.</strong><span>The load of V0.33 with the new LFO bank is not known yet. Read it with SEL held before this goes in.</span></div>
+  </section>
+</main>
+
+<script>
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Kevin Sint */
+/* ==== The engine. These three functions use nothing from the page: the audio thread gets their text, and the picture runs them too. ==== */
+
+/* a knob's value, 0..127, to its time or its frequency */
+function kickTimes() {
+  return {
+    decay: function (v) { return 0.05 * Math.pow(2, v / 127 * 5.9); },                      /* the body: 50 ms .. 3 s to fall to nothing */
+    attack: function (v) { return 0.001 * Math.pow(2, v / 127 * 8.64); },                   /* the body: 1 ms .. 400 ms that its start is cut */
+    clickAttack: function (v) { return v ? 0.0002 * Math.pow(2, v / 127 * 8) : 0; },        /* the click: at once, or 0.2 ms .. 51 ms */
+    rumbleAttack: function (v) { return 0.005 * Math.pow(2, v / 127 * 7.64); },             /* the rumble: 5 ms .. 1 s to come back up */
+    depth: function (v) { return 0.004 * Math.pow(2, v / 127 * 5.5); },                     /* 4 ms .. 180 ms for the pitch to fall to the note */
+    snap: function (v) { return 0.005 * Math.pow(2, v / 127 * 6); },                        /* 5 ms .. 320 ms for the click to fall to nothing */
+    tone: function (v) { return 400 * Math.pow(2, v / 127 * 5); },                          /* the noise's low-pass: 400 Hz .. 12.8 kHz */
+    tune: function (v) { return 40 * Math.pow(2, v / 127 * 6); },                           /* the click's note: 40 Hz .. 2.56 kHz */
+    lengths: [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4],                                        /* the rumble's LENGTH, in bars of 4 beats */
+    length: function (index, bpm) { return this.lengths[index] * 240 / bpm; },              /* ... and in seconds at a tempo */
+    dark: function (v) { return 50 * Math.pow(2, v / 127 * 3); },                           /* the rumble's low-pass: 50 .. 400 Hz */
+    lfoBars: [4, 2, 1, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32],                                /* the rumble's LFO: one cycle, in bars */
+    delayBars: [1 / 64, 1 / 32, 1 / 24, 1 / 16, 1 / 12, 3 / 32, 1 / 8, 1 / 6, 3 / 16, 1 / 4, 1 / 2]      /* the rumble's DELAY, in bars: T is a triplet, D is dotted */                            /* the rumble's low-pass: 50 .. 400 Hz */
+  };
+}
+
+/* the kick, one sample for each tick(), at `rate` samples a second */
+function makeCore(rate) {
+  var T = kickTimes(), TWO_PI = 2 * Math.PI;
+  var ECHO = [0.0297, 0.0371, 0.0411, 0.0533];      /* the rumble's four echoes, in seconds: no two in a simple ratio */
+  var p = { pitch: 24, decay: 64, depth: 56, sweep: 36, drive: 30, level: 100, curve: 96, phase: 0, type: 0, attack: 0, acurve: 100, hpf: 1,
+            click: 71, bend: 76, tune: 48, snap: 64, cattack: 0, ccurve: 96, noise: 42, tone: 80, mode: 0,
+            rumble: 55, rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, duck: 80, reverb: 127, delay: 0, ddiv: 3, dfbk: 50, ldiv: 3, lshape: 0, llevel: 0, ldark: 0, bpm: 120, steps: 16, trigs: 4, shift: 0 };
+  var d = {}, k;
+  var lines = ECHO.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), at = [0, 0, 0, 0], damp = [0, 0, 0, 0], back = [0, 0, 0, 0];
+  var late = new Float32Array(Math.ceil(rate / 16) + 2), lateAt = 0;      /* the rumble's PHASE: up to one cycle of C0 */
+  var dark1 = 0, dark2 = 0, rumbleGain = 1, rumbleN = -1;
+  var echo = new Float32Array(Math.ceil(rate * 3) + 2), echoAt = 0;      /* the rumble's DELAY: up to half a bar at 40 BPM, 3 s */
+  var ctl = 0, lfoPhase = 0, lfoGain = 1, lfoGainTo = 1, darkNow = 0, darkTo = -1;      /* the rumble's LFO, worked out each 32 samples */
+  var hpY = new Float64Array(9), hpX = new Float64Array(9);              /* three chains (body, click, click alone) of three low cuts */
+  var cur = null, old = null, fadeStep = 1 / (0.002 * rate), smooth = 1 - Math.exp(-1 / (0.0015 * rate));
+  var noiseEvery = Math.max(1, Math.round(rate / 48000)), dampKeep = Math.pow(0.35, 48000 / rate);
+  var solo = 'all', running = false, stepCount = 0, untilStep = 0;
+  var droneOn = false, droneGain = 0, saw = [0, 0.37, 0.71], SAW_HZ = [110, 110.7, 164.6], droneLow1 = 0, droneLow2 = 0, droneKeep = Math.exp(-TWO_PI * 700 / rate);
+  var vb = 0, vt = 0, vs = 0, vl = 0, vh = 0, vh2 = 0;                  /* one voice's sample: body, click and noise, click alone, level, the two pitches */
+  var self = { out: 0, all: 0, body: 0, click: 0, rumble: 0, hz: 0, hz2: 0, step: -1, hits: 0 };
+
+  function set(values) {
+    for (var name in values) p[name] = values[name];
+    d.note = 16.3516 * Math.pow(2, p.pitch / 12);       /* 0 is C0 */
+    d.attack = T.attack(p.attack); d.attackBend = 5 - p.acurve / 127 * 15; d.levelTau = T.decay(p.decay) / 5;
+    d.depth = T.depth(p.depth); d.octaves = p.sweep / 127 * 5; d.snap = p.curve / 127;
+    d.gain = 1 + p.drive / 127 * 15; d.wet = Math.min(1, p.drive / 16); d.bend = p.drive / 127;
+    d.hold = 1 + Math.floor(p.drive / 127 * 24 * rate / 48000); d.crush = Math.pow(2, 11 - p.drive / 127 * 8);      /* CRUSH: fewer samples, fewer bits */
+    d.amount = p.click / 127; d.clickHz = T.tune(p.tune); d.clickTime = T.snap(p.snap); d.clickTau = d.clickTime / 5;
+    d.clickAttack = T.clickAttack(p.cattack); d.clickOct = p.bend / 127 * 5; d.clickSnap = p.ccurve / 127;
+    d.noiseLevel = p.noise / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(p.tone) / (rate / noiseEvery));
+    d.hpKeep = 1 - TWO_PI * 30 / rate;
+    d.life = Math.floor(rate * (Math.max(d.attack + 3 * T.decay(p.decay), d.clickAttack + 3 * d.clickTime) + 0.05));
+    d.length = T.length(p.rlen, p.bpm);
+    for (k = 0; k < 4; k++) back[k] = Math.pow(0.001, ECHO[k] / d.length);      /* each echo's way back: -60 dB after LENGTH, a part of a bar at the tempo */
+    d.darkHz = T.dark(p.dark); d.darkKeep = Math.exp(-TWO_PI * d.darkHz / rate);
+    d.lfoStep = 32 / (T.lfoBars[p.ldiv] * 240 / p.bpm * rate); d.lfoLevel = p.llevel / 127; d.lfoDark = p.ldark / 127;
+    d.reverb = p.reverb / 127; d.echoN = Math.max(1, Math.min(echo.length - 1, Math.floor(T.delayBars[p.ddiv] * 240 / p.bpm * rate))); d.echoMix = p.delay / 127; d.echoBack = p.dfbk / 127 * 0.9;
+    if (darkTo < 0) darkNow = darkTo = d.darkKeep; d.grit = 1 + p.grit / 127 * 11;
+    d.rumbleAttack = T.rumbleAttack(p.rattack);
+    d.late = Math.min(late.length - 1, Math.floor(p.rphase / 128 / d.note * rate));
+    d.rumbleLevel = p.rumble / 127 * 1.2;
+    d.duck = p.duck / 127; d.stepLen = rate * 60 / p.bpm / 4;
+    if (!p.rumble) { for (k = 0; k < 4; k++) { lines[k].fill(0); damp[k] = 0; } late.fill(0); echo.fill(0); dark1 = dark2 = 0; }
+  }
+  function hit() {
+    if (cur) { old = cur; old.fade = 1; }       /* the hit before fades in 2 ms: no step in the wave */
+    cur = { n: 0, phase: p.phase / 128, phase2: 0, noise: 0, white: 0, seed: 22222, held: 0, fade: 1 };
+    rumbleN = 0; self.hits++;
+  }
+  function trig(step) { var steps = p.steps, trigs = Math.min(steps, p.trigs); return (((step - p.shift) % steps + steps) % steps) * trigs % steps < trigs; }
+  function fold(v) { return Math.sin(Math.PI / 2 * v); }     /* one stage: past its top it comes back down */
+  /* the pitch's fall, 1 .. 0, at `u` of its time: round (a slow start, then down, done at 1) or a snap (most of it at once) */
+  function fallAt(u, snap) { return (1 - snap) * (u < 1 ? (1 - u) * (1 - u) * (1 + 2 * u) : 0) + snap * Math.exp(-5 * u); }
+  /* the body's attack, 0 .. 1 at `u` of its time: bend 5 is fast at the start, 0 is a line, -10 stays low and comes up at the end */
+  function bent(u, bend) { return Math.abs(bend) < 0.01 ? u : (1 - Math.exp(-bend * u)) / (1 - Math.exp(-bend)); }
+  function rise(t, time) { return t < time ? (1 - Math.exp(-5 * t / time)) / 0.9933 : 1; }      /* an attack: 0 .. 1 in `time` */
+
+  function voice(v) {
+    var t = v.n / rate, x, driven;
+    /* the body: the DECAY runs from the hit, and the ATTACK only cuts its start, so a longer attack does not move the rest of the wave */
+    var level = Math.exp(-t / d.levelTau) * (t < d.attack ? bent(t / d.attack, d.attackBend) : 1);
+    var clickEnv = t < d.clickAttack ? rise(t, d.clickAttack) : Math.exp(-(t - d.clickAttack) / d.clickTau);   /* the click: its own ATTACK, then SNAP */
+    var hz = d.note * Math.pow(2, d.octaves * fallAt(t / d.depth, d.snap));
+    var hz2 = d.clickHz * Math.pow(2, d.clickOct * fallAt(t / (d.clickTime * 0.4), d.clickSnap));                   /* the click's own sweep, done at 0.4 of its length */
+    var clickLevel = d.amount * clickEnv, click = Math.sin(TWO_PI * v.phase2) * clickLevel, body;
+    if (p.mode === 1) body = Math.sin(TWO_PI * v.phase + click * 6);        /* FM: the click bends the body */
+    else {
+      body = Math.sin(TWO_PI * v.phase);
+      if (p.mode === 2) body = body * (1 - clickLevel) + body * click * 2;       /* RING */
+    }
+    v.phase += hz / rate; v.phase -= Math.floor(v.phase);
+    v.phase2 += hz2 / rate; v.phase2 -= Math.floor(v.phase2);
+    if (v.n % noiseEvery === 0) {
+      v.seed = (v.seed * 1664525 + 1013904223) >>> 0; v.white = v.seed / 2147483648 - 1;
+      v.noise = d.noiseKeep * v.noise + (1 - d.noiseKeep) * v.white;
+    }
+    x = body * level;
+    if (p.type === 0) driven = fold(Math.tanh(x * (1 + 4 * d.bend)) * (1 + 2 * d.bend));      /* a soft top first (it compresses), then the fold */
+    else if (p.type === 1) driven = Math.max(-1, Math.min(1, x * d.gain));
+    else { if (v.n % d.hold === 0) v.held = Math.round(Math.max(-1, Math.min(1, x * 1.5)) * d.crush) / d.crush; driven = v.held; }
+    vb = x + (driven - x) * d.wet;
+    /* the click (MIX) and the noise go round the drive, with their own envelopes: a loud body does not flatten them */
+    vt = (p.mode === 0 ? click * 1.4 : 0) + v.noise * d.noiseLevel * Math.exp(-t / 0.003);
+    vs = vt + (p.mode === 0 ? 0 : click * 1.4);      /* in FM and RING the click is inside the body: alone, it is its oscillator as it is */
+    vl = level; vh = hz; vh2 = hz2;
+    v.n++;
+  }
+  function lowCut(chain, x) {
+    if (!p.hpf) return x;
+    for (var j = chain * 3; j < chain * 3 + 3; j++) { hpY[j] = d.hpKeep * (hpY[j] + x - hpX[j]); hpX[j] = x; x = hpY[j]; }
+    return x;
+  }
+
+  function tick() {
+    var b = 0, c = 0, cs = 0, level = 0, r = 0, lv = p.level / 127, sum, was, kick, heard, droneOut = 0;
+    if (running) {      /* the LFO: a gate, 4 steps a beat, with the bank's Euclidean pattern */
+      if (untilStep <= 0) { self.step = stepCount % p.steps; if (trig(self.step)) hit(); stepCount++; untilStep += d.stepLen; }
+      untilStep--;
+    }
+    if (old) {
+      voice(old); old.fade -= fadeStep;
+      if (old.fade <= 0) old = null; else { b = vb * old.fade; c = vt * old.fade; cs = vs * old.fade; }
+    }
+    if (cur) {
+      voice(cur); b += vb; c += vt; cs += vs; level = vl; self.hz = vh; self.hz2 = vh2;
+      if (cur.n > d.life) cur = null;
+    }
+    b = lowCut(0, b); c = lowCut(1, c); cs = lowCut(2, cs);
+    kick = b + c;
+    if (p.rumble) {             /* the rumble: four echoes that feed themselves, dark, driven, down at the hit and up again in its own ATTACK */
+      if ((ctl++ & 31) === 0) {      /* the LFO: its place in the cycle, then what it does to the level and to the low-pass */
+        lfoPhase += d.lfoStep; lfoPhase -= Math.floor(lfoPhase);
+        var wave = p.lshape === 0 ? Math.sin(TWO_PI * lfoPhase) : p.lshape === 1 ? 1 - 4 * Math.abs(lfoPhase - 0.5) : lfoPhase < 0.5 ? 1 : -1;
+        lfoGainTo = 1 - d.lfoLevel * (0.5 - 0.5 * wave);      /* LFO LEVEL: from full level down, to silence at 127 */
+        darkTo = d.lfoDark ? Math.exp(-TWO_PI * Math.min(2000, Math.max(20, d.darkHz * Math.pow(2, wave * d.lfoDark * 2))) / rate) : d.darkKeep;      /* LFO DARK: up to 2 octaves each way */
+      }
+      lfoGain += (lfoGainTo - lfoGain) * smooth; darkNow += (darkTo - darkNow) * smooth;
+      var feed = kick;
+      if (d.echoMix) {              /* DELAY: repeats of the kick, before the reverb */
+        var heardEcho = echo[(echoAt - d.echoN + echo.length) % echo.length];
+        echo[echoAt] = kick + heardEcho * d.echoBack; echoAt = echoAt + 1 === echo.length ? 0 : echoAt + 1;
+        feed = kick + heardEcho * d.echoMix;
+      }
+      sum = 0;
+      for (k = 0; k < 4; k++) {
+        was = lines[k][at[k]];
+        damp[k] = was + dampKeep * (damp[k] - was);
+        lines[k][at[k]] = feed * 0.5 + damp[k] * back[k];
+        at[k] = at[k] + 1 === lines[k].length ? 0 : at[k] + 1;
+        sum += k & 1 ? -was : was;
+      }
+      sum = sum * d.reverb + feed * (1 - d.reverb);      /* REVERB: at 0 the low-pass takes the kick and its repeats with no tail */
+      dark1 = sum + darkNow * (dark1 - sum); dark2 = dark1 + darkNow * (dark2 - dark1);
+      if (rumbleN >= 0) {      /* up in its ATTACK, and closed at LENGTH after the hit: the last 30 % of the length is the way down */
+        var since = rumbleN / rate, open = since >= d.length ? 0 : since > 0.7 * d.length ? (d.length - since) / (0.3 * d.length) : 1;
+        rumbleGain += (rise(since, d.rumbleAttack) * open * open - rumbleGain) * smooth; rumbleN++;
+      }
+      late[lateAt] = Math.tanh(dark2 * d.grit) / Math.sqrt(d.grit) * rumbleGain * lfoGain * d.rumbleLevel;
+      r = late[(lateAt - d.late + late.length) % late.length];
+      lateAt = lateAt + 1 === late.length ? 0 : lateAt + 1;
+    }
+    /* three volumes: the body's LEVEL is after the rumble's input, so a silent body still feeds the rumble */
+    self.body = Math.tanh(b * lv * 0.7); self.click = Math.tanh(cs * 0.7); self.rumble = r;
+    self.all = Math.tanh((b * lv + c) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
+    heard = solo === 'body' ? self.body : solo === 'click' ? self.click : solo === 'rumble' ? r : self.all;
+    droneGain += ((droneOn ? 0.16 : 0) - droneGain) * smooth * 0.1;
+    if (droneGain > 0.00001) {      /* a drone under the kick, to hear DUCK: three saws through a low-pass */
+      for (k = 0; k < 3; k++) {
+        var inc = SAW_HZ[k] / rate, ph = saw[k] + inc, s;
+        if (ph >= 1) ph -= 1;
+        saw[k] = ph; s = 2 * ph - 1;
+        if (ph < inc) { s -= (2 - ph / inc) * (ph / inc) - 1; } else if (ph > 1 - inc) { var e = (ph - 1) / inc; s -= e * e + 2 * e + 1; }      /* no step at the saw's edge */
+        droneOut += s;
+      }
+      droneLow1 = droneOut + droneKeep * (droneLow1 - droneOut); droneLow2 = droneLow1 + droneKeep * (droneLow2 - droneLow1);
+      droneOut = droneLow2 * droneGain * (1 - d.duck * Math.min(1, level));
+    }
+    self.out = heard + droneOut;
+  }
+  function message(m) {
+    if (m.set) set(m.set);
+    if (m.hit) hit();
+    if (m.run !== undefined) { running = !!m.run; stepCount = 0; untilStep = 0; lfoPhase = 0; ctl = 0;      /* the rumble's LFO starts with the first step */
+      if (!running) self.step = -1; }
+    if (m.drone !== undefined) droneOn = !!m.drone;
+    if (m.solo !== undefined) solo = m.solo;
+  }
+  set({});
+  self.tick = tick; self.message = message;
+  return self;
+}
+
+/* the kick for the loudspeaker: the core at twice the rate, then a filter and one sample out of two */
+function makeKickEngine(outRate) {
+  var core = makeCore(outRate * 2), TAPS = 47, MID = 23, taps = [], buf = new Float32Array(64), at = 0, total = 0, i;
+  for (i = 0; i < TAPS; i++) {
+    var k = i - MID, sinc = k === 0 ? 0.5 : Math.sin(Math.PI * k / 2) / (Math.PI * k);
+    taps.push(sinc * (0.42 - 0.5 * Math.cos(2 * Math.PI * i / (TAPS - 1)) + 0.08 * Math.cos(4 * Math.PI * i / (TAPS - 1))));
+    total += taps[i];
+  }
+  for (i = 0; i < TAPS; i++) taps[i] /= total;
+  return {
+    core: core,
+    message: core.message,
+    process: function (out) {
+      for (var n = 0; n < out.length; n++) {
+        core.tick(); buf[at] = core.out; at = (at + 1) & 63;
+        core.tick(); buf[at] = core.out; at = (at + 1) & 63;
+        var acc = 0;
+        for (var j = 0; j < TAPS; j++) acc += taps[j] * buf[(at - 1 - j) & 63];
+        out[n] = acc > 1 ? 1 : acc < -1 ? -1 : acc;
+      }
+    }
+  };
+}
+</script>
+<script>
+(function () {
+  'use strict';
+  var T = kickTimes();
+  var NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  function ms(seconds) { var v = seconds * 1000; return (v && v < 10 ? v.toFixed(1) : Math.round(v)) + ' ms'; }
+  function plain(v) { return String(v); }
+  function degrees(v) { return Math.round(v / 128 * 360) + ' deg'; }
+  var KICK = [
+    { id: 'level', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 100, text: plain },
+    { id: 'pitch', name: 'PITCH', where: 'SELECT', min: 0, max: 60, value: 24, text: function (v) { return NOTE[v % 12] + Math.floor(v / 12); } },
+    { id: 'attack', name: 'ATTACK', where: 'OCT-K1', min: 0, max: 127, value: 0, text: function (v) { return ms(T.attack(v)); } },
+    { id: 'acurve', name: 'ATK CURVE', where: 'OCT+K1', min: 0, max: 127, value: 100, text: plain },
+    { id: 'decay', name: 'DECAY', where: 'K2', min: 0, max: 127, value: 64, text: function (v) { return ms(T.decay(v)); } },
+    { id: 'depth', name: 'DEPTH', where: 'OCT-K2', min: 0, max: 127, value: 56, text: function (v) { return ms(T.depth(v)); } },
+    { id: 'sweep', name: 'SWEEP', where: 'K3', min: 0, max: 127, value: 36, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
+    { id: 'curve', name: 'PITCH CURVE', where: 'OCT-K4', min: 0, max: 127, value: 96, text: plain },
+    { id: 'drive', name: 'DRIVE', where: 'K4', min: 0, max: 127, value: 30, text: plain },
+    { id: 'type', name: 'DRIVE TYPE', where: 'OCT-ALGO', options: ['FOLD', 'CLIP', 'CRUSH'], value: 0 },
+    { id: 'phase', name: 'PHASE', where: 'OCT-K3', min: 0, max: 127, value: 0, text: degrees },
+    { id: 'hpf', name: 'HPF', where: 'OCT+', options: ['OFF', 'ON'], value: 1 }
+  ];
+  var CLICK = [
+    { id: 'click', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 71, text: plain },
+    { id: 'cattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 0, text: function (v) { return ms(T.clickAttack(v)); } },
+    { id: 'snap', name: 'SNAP', where: 'K3', min: 0, max: 127, value: 64, text: function (v) { return ms(T.snap(v)); } },
+    { id: 'tune', name: 'TUNE', where: 'K2', min: 0, max: 127, value: 48, text: function (v) { return Math.round(T.tune(v)) + ' Hz'; } },
+    { id: 'bend', name: 'SWEEP', where: 'K4', min: 0, max: 127, value: 76, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
+    { id: 'ccurve', name: 'PITCH CURVE', where: 'OCT+K1', min: 0, max: 127, value: 96, text: plain },
+    { id: 'mode', name: 'CLICK MODE', where: 'ALGO', options: ['MIX', 'FM', 'RING'], value: 0 },
+    { id: 'noise', name: 'NOISE', where: 'OCT-K1', min: 0, max: 127, value: 42, text: plain },
+    { id: 'tone', name: 'TONE', where: 'OCT-K4', min: 0, max: 127, value: 80, text: function (v) { return Math.round(T.tone(v)) + ' Hz'; } }
+  ];
+  var RUMBLE = [
+    { id: 'rumble', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 55, text: plain },
+    { id: 'rattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 81, text: function (v) { return ms(T.rumbleAttack(v)); } },
+    { id: 'dark', name: 'DARK', where: 'K3', min: 0, max: 127, value: 50, text: function (v) { return Math.round(T.dark(v)) + ' Hz'; } },
+    { id: 'grit', name: 'GRIT', where: 'K4', min: 0, max: 127, value: 50, text: plain },
+    { id: 'rphase', name: 'PHASE', where: 'OCT-K1', min: 0, max: 127, value: 0, text: degrees },
+    { id: 'reverb', name: 'REVERB', where: 'OCT+K1', min: 0, max: 127, value: 127, text: plain },
+    { id: 'rlen', name: 'LENGTH', where: 'K2', options: ['1/16', '1/8', '1/4', '1/2', '1 BAR', '2 BARS', '4 BARS'], value: 2 },
+    { id: 'delay', name: 'DELAY', where: 'OCT+K2', min: 0, max: 127, value: 0, text: plain },
+    { id: 'ddiv', name: 'DLY TIME', where: 'OCT+K3', options: ['1/64', '1/32', '1/16T', '1/16', '1/8T', '1/16D', '1/8', '1/4T', '1/8D', '1/4', '1/2'], value: 3 },
+    { id: 'dfbk', name: 'DLY BACK', where: 'OCT+K4', min: 0, max: 127, value: 50, text: plain },
+    { id: 'ldiv', name: 'LFO RATE', where: 'BANK', options: ['4 BARS', '2 BARS', '1 BAR', '1/2', '1/4', '1/8', '1/16', '1/32'], value: 3 },
+    { id: 'lshape', name: 'LFO SHAPE', where: 'BANK', options: ['SINE', 'TRIANGLE', 'SQUARE'], value: 0 },
+    { id: 'llevel', name: 'LFO LEVEL', where: 'LFO+K1', min: 0, max: 127, value: 0, text: plain },
+    { id: 'ldark', name: 'LFO DARK', where: 'LFO+K3', min: 0, max: 127, value: 0, text: plain },
+    { id: 'duck', name: 'DUCK', where: 'OCT-K4', min: 0, max: 127, value: 80, text: plain }
+  ];
+  var LFO = [
+    { id: 'bpm', name: 'TEMPO', where: 'PRESETS', min: 40, max: 200, value: 120, text: function (v) { return v + ' BPM'; } },
+    { id: 'steps', name: 'STEPS', where: 'STEPS set', min: 1, max: 16, value: 16, text: plain },
+    { id: 'trigs', name: 'TRIGS', where: 'STEPS set', min: 1, max: 16, value: 4, text: plain },
+    { id: 'shift', name: 'SHIFT', where: 'STEPS set', min: 0, max: 15, value: 0, text: plain }
+  ];
+  var value = {}, controls = {}, tab = 'body', soloOn = false;
+  function copy() { var o = {}; for (var k in value) o[k] = value[k]; return o; }
+  function isLayer(name) { return name === 'body' || name === 'click' || name === 'rumble'; }
+  function soloLayer() { return soloOn && isLayer(tab) ? tab : 'all'; }
+
+  /* ---- the sound: the engine in the browser's audio thread; in the page's own thread when the browser refuses that ---- */
+  var audio = null, post = null, pending = [], readout = document.getElementById('readout'), engineLine = document.getElementById('engine');
+  var WORKLET = 'registerProcessor("dr1-kick", class extends AudioWorkletProcessor {' +
+    'constructor() { super(); var me = this; this.engine = makeKickEngine(sampleRate); this.shown = -1; this.hits = 0; this.port.onmessage = function (m) { me.engine.message(m.data); }; }' +
+    'process(inputs, outputs) { this.engine.process(outputs[0][0]); var s = this.engine.core.step; if (s !== this.shown) { this.shown = s; this.port.postMessage({ step: s }); } var h = this.engine.core.hits; if (h !== this.hits) { this.hits = h; this.port.postMessage({ hitAt: currentTime }); } return true; } });';
+  function send(m) { if (post) post(m); else pending.push(m); }
+  function engineReady(kind, how) {
+    post = how;
+    post({ set: copy() }); post({ solo: soloLayer() });
+    pending.forEach(post); pending = [];
+    engineLine.textContent = 'Sound: ' + kind + ', ' + audio.sampleRate * 2 + ' samples a second inside.';
+  }
+  function inPage(reason) {
+    if (post) return;
+    console.warn('DR1 Kick: the audio thread is not available, the engine runs in the page.', reason && reason.name);
+    var local = makeKickEngine(audio.sampleRate), node = audio.createScriptProcessor(1024, 0, 1), shown = -1, hitsSeen = 0;
+    node.onaudioprocess = function (e) { local.process(e.outputBuffer.getChannelData(0)); if (local.core.step !== shown) { shown = local.core.step; onStep(shown); } if (local.core.hits !== hitsSeen) { hitsSeen = local.core.hits; onHit(e.playbackTime); } };
+    node.connect(audio.destination);
+    engineReady('in the page', local.message);
+  }
+  function ready() {
+    if (audio) { if (audio.state === 'suspended') audio.resume(); return true; }
+    var Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) { engineLine.textContent = 'This browser cannot play sound from a web page. Try another browser.'; return false; }
+    try { audio = new Context({ latencyHint: 'interactive' }); }
+    catch (error) { console.error('DR1 Kick: no audio context.', error && error.name); engineLine.textContent = 'The sound did not start. Reload the page and try again.'; audio = null; return false; }
+    if (audio.audioWorklet && window.AudioWorkletNode) {
+      var url = URL.createObjectURL(new Blob([String(kickTimes), '\n', String(makeCore), '\n', String(makeKickEngine), '\n', WORKLET], { type: 'text/javascript' }));
+      audio.audioWorklet.addModule(url).then(function () {
+        var node = new AudioWorkletNode(audio, 'dr1-kick', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1] });
+        node.port.onmessage = function (m) { if (m.data.hitAt !== undefined) onHit(m.data.hitAt); else onStep(m.data.step); };
+        if (post) return;
+        node.connect(audio.destination);
+        engineReady('audio thread', function (m) { node.port.postMessage(m); });
+      }).catch(inPage);
+      setTimeout(function () { inPage({ name: 'timeout' }); }, 1500);
+    } else inPage();
+    return true;
+  }
+
+  /* ---- the picture: one hit from silence, from the same core, at 96 000 samples a second ---- */
+  var RATE = 96000, span = 0.5, shot = null, drawDue = false;
+  var scope = document.getElementById('scope'), sc = scope.getContext('2d'), cursor = document.getElementById('cursor'), cc = cursor.getContext('2d');
+  var GREY = '#b4bcc4', BLUE = '#5adee6', AMBER = '#ffa400', GRID = '#33383e', GRID_STRONG = '#59616a', TEXT = '#c9d0d6';
+  var PINK = '#ff8ad8', GREEN = '#8be36b', WAVES = ['all', 'body', 'click', 'rumble', 'pitch'];
+  var follow = true, byHand = { all: true, body: true, click: true, rumble: true, pitch: true };
+  function see() {
+    if (!follow) return byHand;
+    return { all: true, body: tab === 'body', click: tab === 'click', rumble: tab === 'rumble', pitch: tab !== 'rumble' };
+  }
+  function pitchOf() { var now = see(); return now.click && !now.body ? 'click' : 'body'; }      /* the click's pitch when the click shows without the body */
+  function showSees() {
+    var now = see();
+    document.getElementById('see-follow').setAttribute('aria-pressed', String(follow));
+    WAVES.forEach(function (name) { document.getElementById('see-' + name).setAttribute('aria-pressed', String(!!now[name])); });
+  }
+  document.getElementById('see-follow').addEventListener('click', function () { follow = !follow; showSees(); redraw(false); });
+  WAVES.forEach(function (name) {
+    document.getElementById('see-' + name).addEventListener('click', function () {
+      if (follow) { var now = see(); WAVES.forEach(function (n) { byHand[n] = !!now[n]; }); follow = false; }      /* a wave chosen by hand: start from what shows now */
+      byHand[name] = !byHand[name]; showSees(); redraw(false);
+    });
+  });
+  /* the picture's length: a part of a bar at the tempo, as the rumble's LENGTH */
+  function setSpan() { span = Number(document.getElementById('span').value) * 240 / (value.bpm || 120); }
+  function render() {
+    var count = Math.floor(span * RATE), core = makeCore(RATE), i;
+    var made = { count: count, all: new Float32Array(count), body: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count), hz: new Float32Array(count), hz2: new Float32Array(count) };
+    core.message({ set: copy() }); core.message({ hit: 1 });
+    for (i = 0; i < count; i++) {
+      core.tick();
+      made.all[i] = core.all; made.body[i] = core.body; made.click[i] = core.click; made.rumble[i] = core.rumble; made.hz[i] = core.hz; made.hz2[i] = core.hz2;
+    }
+    shot = made;
+  }
+  function nice(target) { var list = [0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]; for (var i = 0; i < list.length; i++) if (list[i] >= target) return list[i]; return 5; }
+  function barText(bars) {      /* a place in the picture as a part of a bar: 1/16, 3/8, 1 BAR, 1 1/2 */
+    var den = 4096, num = Math.round(bars * den), a = num, b = den, whole;
+    while (b) { var r = a % b; a = b; b = r; }
+    num /= a; den /= a; whole = Math.floor(num / den); num -= whole * den;
+    return whole ? (num ? whole + ' ' + num + '/' + den : whole + (whole === 1 ? ' BAR' : ' BARS')) : num + '/' + den;
+  }
+  function timeText(s) { return s >= 1 ? s + ' s' : (s * 1000 < 1 ? (s * 1000).toFixed(1) : Math.round(s * 1000 * 10) / 10) + ' ms'; }
+  function frame() {       /* the plot's box in device pixels */
+    var ratio = scope.width / Math.max(1, scope.clientWidth);
+    return { ratio: ratio, w: scope.width, top: 10 * ratio, bottom: scope.height - 26 * ratio };
+  }
+  function draw() {
+    drawDue = false;
+    if (!shot) render();
+    var f = frame(), w = f.w, h = scope.height, mid = (f.top + f.bottom) / 2, amp = (f.bottom - f.top) / 2, count = shot.count, x, i, s;
+    function Y(v) { return mid - v * amp; }
+    function pitchY(v) { return f.bottom - Math.max(0, Math.min(1, Math.log2(Math.max(v, 16) / 16) / 8)) * (f.bottom - f.top); }
+    sc.fillStyle = '#000'; sc.fillRect(0, 0, w, h);
+    sc.font = '600 ' + 16 * f.ratio + 'px "IBM Plex Mono", ui-monospace, Menlo, monospace'; sc.textBaseline = 'middle';
+    sc.strokeStyle = GRID; sc.lineWidth = f.ratio; sc.beginPath();
+    [1, 0.5, 0, -0.5, -1].forEach(function (v) { sc.moveTo(0, Math.round(Y(v)) + 0.5); sc.lineTo(w, Math.round(Y(v)) + 0.5); });
+    sc.stroke();
+    /* the time grid: the picture in 8 parts of the clock; the even lines are stronger and have a name */
+    var part = Number(document.getElementById('span').value);
+    for (s = 1; s < 8; s++) {
+      x = Math.round(s / 8 * w) + 0.5; sc.strokeStyle = s % 2 ? GRID : GRID_STRONG;
+      sc.beginPath(); sc.moveTo(x, f.top); sc.lineTo(x, f.bottom); sc.stroke();
+    }
+    function trace(a, colour, width) {
+      sc.strokeStyle = colour; sc.fillStyle = colour; sc.lineWidth = width * f.ratio; sc.lineJoin = 'round'; sc.beginPath();
+      if (count <= w) {
+        for (i = 0; i < count; i++) { x = i / count * w; if (i) sc.lineTo(x, Y(a[i])); else sc.moveTo(x, Y(a[i])); }
+        sc.stroke();
+        if (w / count >= 5) for (i = 0; i < count; i++) sc.fillRect(i / count * w - 1.5 * f.ratio, Y(a[i]) - 1.5 * f.ratio, 3 * f.ratio, 3 * f.ratio);      /* each sample has its dot */
+      } else {
+        var before = a[0];
+        for (x = 0; x < w; x++) {      /* more than one sample a pixel: the lowest and the highest of each pixel */
+          var from = Math.floor(x * count / w), to = Math.floor((x + 1) * count / w), lo = before, hi = before;
+          for (i = from; i < to; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; }
+          before = a[to - 1];
+          sc.moveTo(x + 0.5, Y(hi) - 0.5 * f.ratio); sc.lineTo(x + 0.5, Y(lo) + 0.5 * f.ratio);
+        }
+        sc.stroke();
+      }
+    }
+    var now = see(), pitch = pitchOf() === 'click' ? shot.hz2 : shot.hz;
+    if (now.all) trace(shot.all, GREY, 1);
+    if (now.rumble) trace(shot.rumble, GREEN, 1.5);
+    if (now.body) trace(shot.body, BLUE, 1.5);
+    if (now.click) trace(shot.click, PINK, 1.5);
+    if (now.pitch) {
+      sc.strokeStyle = AMBER; sc.lineWidth = 1.5 * f.ratio; sc.setLineDash([6 * f.ratio, 4 * f.ratio]); sc.beginPath();      /* the pitch: 16 Hz at the bottom, 4 kHz at the top */
+      for (x = 0; x < w; x++) { i = Math.min(count - 1, Math.floor(x * count / w)); if (x) sc.lineTo(x, pitchY(pitch[i])); else sc.moveTo(x, pitchY(pitch[i])); }
+      sc.stroke(); sc.setLineDash([]);
+    }
+    /* the scales */
+    sc.fillStyle = TEXT; sc.textAlign = 'left';
+    sc.fillText('+1', 6 * f.ratio, Y(1) + 12 * f.ratio); sc.fillText('0', 6 * f.ratio, Y(0) - 12 * f.ratio); sc.fillText('−1', 6 * f.ratio, Y(-1) - 12 * f.ratio);
+    sc.textAlign = 'center';
+    for (s = 2; s < 8; s += 2) sc.fillText(barText(part * s / 8) + (w / f.ratio >= 700 ? ' \u00B7 ' + timeText(Math.round(span * s / 8 * 100000) / 100000) : ''), s / 8 * w, h - 12 * f.ratio);
+    if (now.pitch) { sc.fillStyle = AMBER; sc.textAlign = 'right'; [64, 256, 1024].forEach(function (v) { sc.fillText(v + ' Hz', w - 6 * f.ratio, pitchY(v)); }); }
+    describe();
+  }
+  function redraw(again) { if (again) shot = null; if (!drawDue) { drawDue = true; requestAnimationFrame(draw); } }
+  function fit() {
+    var ratio = window.devicePixelRatio || 1, w = Math.max(1, Math.round(scope.clientWidth * ratio)), h = Math.max(1, Math.round(scope.clientHeight * ratio));
+    if (scope.width !== w || scope.height !== h) { scope.width = cursor.width = w; scope.height = cursor.height = h; redraw(false); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(scope); else window.addEventListener('resize', fit);
+
+  /* the point under the pointer: its time, its levels, its pitch */
+  function rest() { readout.textContent = 'Point at the wave to read a value.'; }
+  function signed(v) { return (v < 0 ? '−' : '+') + Math.abs(v).toFixed(3); }
+  var pointAt = 0.1, pointOn = false, headOn = true, headAt = -1, hitTime = -1, headFrame = 0;
+  try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) headOn = false; } catch (e) { /* no media query: the playhead stays on */ }
+  function drawOverlay() {
+    var f = frame(), x;
+    cc.clearRect(0, 0, cursor.width, cursor.height);
+    if (pointOn) {      /* the point that is read: a thin dashed line */
+      x = pointAt * f.w; cc.strokeStyle = '#ffffff'; cc.lineWidth = f.ratio; cc.setLineDash([4 * f.ratio, 4 * f.ratio]);
+      cc.beginPath(); cc.moveTo(x, f.top); cc.lineTo(x, f.bottom); cc.stroke(); cc.setLineDash([]);
+    }
+    if (headAt >= 0) {  /* the playhead: a full line with a mark at its top */
+      x = headAt * f.w; cc.strokeStyle = cc.fillStyle = '#ffffff'; cc.lineWidth = 2 * f.ratio;
+      cc.beginPath(); cc.moveTo(x, f.top); cc.lineTo(x, f.bottom); cc.stroke();
+      cc.beginPath(); cc.moveTo(x - 6 * f.ratio, f.top - 8 * f.ratio); cc.lineTo(x + 6 * f.ratio, f.top - 8 * f.ratio); cc.lineTo(x, f.top + 2 * f.ratio); cc.fill();
+    }
+  }
+  function moveHead() {      /* where the sound is now: the audio clock, less the time the sound takes to reach the loudspeaker */
+    headFrame = 0;
+    var heard = audio ? audio.currentTime - hitTime - (audio.outputLatency || 0) : -1;
+    headAt = headOn && hitTime >= 0 && heard < span ? Math.max(0, heard) / span : -1;
+    drawOverlay();
+    if (headAt >= 0) headFrame = requestAnimationFrame(moveHead);
+  }
+  function onHit(at) { hitTime = at; if (headOn && !headFrame) headFrame = requestAnimationFrame(moveHead); }
+  document.getElementById('see-head').addEventListener('click', function (e) {
+    headOn = !headOn; e.currentTarget.setAttribute('aria-pressed', String(headOn));
+    if (headOn && hitTime >= 0 && !headFrame) headFrame = requestAnimationFrame(moveHead); else if (!headOn) { headAt = -1; drawOverlay(); }
+  });
+  document.getElementById('see-head').setAttribute('aria-pressed', String(headOn));
+  function showPoint(part) {
+    if (!shot) return;
+    pointAt = part = Math.max(0, Math.min(0.999999, part));
+    var i = Math.floor(part * shot.count), f = frame();
+    pointOn = true; drawOverlay();
+    var now = see();
+    readout.textContent = (i / RATE * 1000).toFixed(2) + ' ms' +
+      ['all', 'body', 'click', 'rumble'].map(function (name) { return now[name] ? ' · ' + name.toUpperCase() + ' ' + signed(shot[name][i]) : ''; }).join('') +
+      (now.pitch ? ' · ' + pitchOf().toUpperCase() + ' PITCH ' + (pitchOf() === 'click' ? shot.hz2 : shot.hz)[i].toFixed(1) + ' Hz' : '');
+  }
+  function hidePoint() { pointOn = false; drawOverlay(); rest(); }
+  scope.addEventListener('pointermove', function (e) { var box = scope.getBoundingClientRect(); showPoint((e.clientX - box.left) / box.width); });
+  scope.addEventListener('pointerleave', function () { if (document.activeElement !== scope) hidePoint(); });
+  scope.addEventListener('focus', function () { showPoint(pointAt); });
+  scope.addEventListener('blur', hidePoint);
+  scope.addEventListener('keydown', function (e) {      /* the arrows move the point: 1 % of the picture, or one pixel with Shift */
+    var by = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (by) { e.preventDefault(); showPoint(pointAt + by * (e.shiftKey ? 1 / Math.max(1, scope.clientWidth) : 0.01)); }
+  });
+
+  /* ---- the LFO's pattern ---- */
+  var pattern = document.getElementById('pattern'), pc = pattern.getContext('2d'), shownStep = -1;
+  function trig(step) { var steps = value.steps, trigs = Math.min(steps, value.trigs); return (((step - value.shift) % steps + steps) % steps) * trigs % steps < trigs; }
+  function drawPattern() {
+    var w = pattern.width, h = pattern.height, steps = value.steps, cell = Math.floor(w / 16), s;
+    pc.fillStyle = '#000'; pc.fillRect(0, 0, w, h);
+    for (s = 0; s < steps; s++) {
+      pc.fillStyle = trig(s) ? '#ffffff' : '#6b737b';
+      if (trig(s)) pc.fillRect(s * cell + 4, 8, cell - 8, h - 16); else pc.fillRect(s * cell + cell / 2 - 3, h / 2 - 3, 6, 6);
+      if (s === shownStep) { pc.strokeStyle = AMBER; pc.lineWidth = 3; pc.strokeRect(s * cell + 1.5, 3.5, cell - 3, h - 7); }
+    }
+  }
+  function patternText() {
+    var on = [], s; for (s = 0; s < value.steps; s++) if (trig(s)) on.push(s + 1);
+    document.getElementById('pattern-text').textContent = 'Now: ' + on.length + ' of ' + value.steps + ' steps play, steps ' + on.join(', ') + '.';
+  }
+  function onStep(step) { shownStep = step; drawPattern(); }
+
+  var status = document.getElementById('status');
+  function describe() {
+    var peak = 0, peakAt = 0, quiet = -1, i;
+    for (i = 0; i < shot.count; i++) { var a = Math.abs(shot.all[i]); if (a > peak) { peak = a; peakAt = i; } if (a >= 0.01) quiet = i; }
+    function words(layer, list) { return list.map(function (k) { return (k.name.indexOf(layer) ? layer + ' ' : '') + k.name + ' ' + (k.options ? k.options[value[k.id]] : k.text(value[k.id])); }).join(', '); }
+    status.textContent = 'The picture shows the first ' + timeText(span) + '. The wave is highest, ' + peak.toFixed(2) + ' of full level, at ' + (peakAt / RATE * 1000).toFixed(1) + ' ms' +
+      (quiet < shot.count - 1 ? ', and is below 1 % after ' + Math.round((quiet + 1) / RATE * 1000) + ' ms. ' : ', and is still above 1 % at the end of the picture. ') +
+      words('BODY', KICK) + ', ' + words('CLICK', CLICK) + ', ' + words('RUMBLE', RUMBLE) +
+      '. The LFO: ' + value.trigs + ' trigs in ' + value.steps + ' steps at ' + value.bpm + ' BPM.';
+  }
+
+  /* ---- the controls ---- */
+  function build(parent, list) {
+    list.forEach(function (k) {
+      var box = document.createElement('div'), head = document.createElement('div'), name = document.createElement('label'), shown = document.createElement('output'), where = document.createElement('span'), input;
+      box.className = 'knob'; head.className = 'head'; name.className = 'name'; where.className = 'where'; name.textContent = k.name; where.textContent = k.where;
+      value[k.id] = k.value;
+      if (k.options) {
+        input = document.createElement('select');
+        k.options.forEach(function (text, n) { var o = document.createElement('option'); o.value = n; o.textContent = text; input.appendChild(o); });
+        input.value = k.value;
+      } else {
+        input = document.createElement('input'); input.type = 'range'; input.min = k.min; input.max = k.max; input.step = 1; input.value = k.value;
+      }
+      input.id = 'in-' + k.id; name.htmlFor = input.id; shown.htmlFor = input.id;
+      function show() {
+        if (!k.options) { shown.textContent = k.text(value[k.id]); input.setAttribute('aria-valuetext', k.text(value[k.id])); }
+      }
+      input.addEventListener('input', function () {
+        value[k.id] = Number(input.value); show();
+        var one = {}; one[k.id] = value[k.id]; send({ set: one });
+        if (list === LFO) { drawPattern(); patternText(); if (k.id === 'bpm') { setSpan(); redraw(true); } } else redraw(true);
+      });
+      head.appendChild(name); if (!k.options) head.appendChild(shown); head.appendChild(where); box.appendChild(head); box.appendChild(input); parent.appendChild(box);
+      show();
+      controls[k.id] = { input: input, show: show, low: k.options ? 0 : k.min, high: k.options ? k.options.length - 1 : k.max, first: k.value };
+    });
+  }
+  build(document.getElementById('kick'), KICK);
+  build(document.getElementById('click'), CLICK);
+  build(document.getElementById('rumble'), RUMBLE);
+  build(document.getElementById('lfo'), LFO);
+
+  /* ---- the tabs ---- */
+  var TABS = ['body', 'click', 'rumble', 'lfo', 'presets'];
+  function openTab(name, focus) {
+    tab = name;
+    TABS.forEach(function (t) {
+      var button = document.getElementById('tab-' + t), on = t === name;
+      button.setAttribute('aria-selected', String(on)); button.tabIndex = on ? 0 : -1;
+      document.getElementById('panel-' + t).hidden = !on;
+      if (on && focus) button.focus();
+    });
+    try { localStorage.setItem('dr1-kick-tab', name); } catch (e) { /* no storage: the page opens on BODY */ }
+    document.getElementById('solo').disabled = !isLayer(name);
+    send({ solo: soloLayer() });
+    if (name === 'lfo') drawPattern();
+    showSees(); redraw(false);
+  }
+  TABS.forEach(function (t, n) {
+    var button = document.getElementById('tab-' + t);
+    button.addEventListener('click', function () { openTab(t, false); });
+    button.addEventListener('keydown', function (e) {
+      var last = TABS.length - 1, to = e.key === 'ArrowRight' ? (n + 1) % TABS.length : e.key === 'ArrowLeft' ? (n + last) % TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1;
+      if (to >= 0) { e.preventDefault(); openTab(TABS[to], true); }
+    });
+  });
+
+  /* ---- the buttons ---- */
+  var deviceBox = document.querySelector('.device');
+  var runButton = document.getElementById('run'), droneButton = document.getElementById('drone'), soloButton = document.getElementById('solo'), running = false, droning = false;
+  function hit() { if (ready()) send({ hit: 1 }); }
+  document.getElementById('hit').addEventListener('click', hit);
+  runButton.addEventListener('click', function () {
+    if (!ready()) return;
+    running = !running; send({ run: running });
+    runButton.setAttribute('aria-pressed', String(running));
+    if (!running) onStep(-1);
+  });
+  droneButton.addEventListener('click', function () {
+    if (!ready()) return;
+    droning = !droning; send({ drone: droning });
+    droneButton.setAttribute('aria-pressed', String(droning));
+  });
+  soloButton.addEventListener('click', function () {
+    soloOn = !soloOn; soloButton.setAttribute('aria-pressed', String(soloOn));
+    send({ solo: soloLayer() });
+  });
+  document.getElementById('span').addEventListener('change', function () { setSpan(); redraw(true); });
+  window.addEventListener('keydown', function (e) {
+    var tag = e.target && e.target.tagName;
+    if ((e.key === 'k' || e.key === 'K') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && tag !== 'SELECT' && e.target.type !== 'text' && deviceBox.contains(e.target)) hit();
+  });
+
+  /* ---- the presets: kept with the page (its database), or in this browser when the page has none ---- */
+  var presets = [], store = null, LOCAL = 'dr1-kick-presets';
+  var presetList = document.getElementById('preset-list'), presetName = document.getElementById('preset-name'), presetStatus = document.getElementById('preset-status');
+  var presetConfirm = document.getElementById('preset-confirm'), presetNote = '';
+  function tell(text) { presetStatus.textContent = text + (presetNote ? ' ' + presetNote : ''); }
+  function slug(name) { return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); }
+  function chosen() { for (var i = 0; i < presets.length; i++) if (presets[i].id === presetList.value) return presets[i]; return null; }
+  function showPresets() {
+    var keep = presetList.value;
+    presetList.textContent = '';
+    presets.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    presets.forEach(function (one) { var o = document.createElement('option'); o.value = one.id; o.textContent = one.name; presetList.appendChild(o); });
+    if (!presets.length) { var none = document.createElement('option'); none.value = ''; none.textContent = 'No presets yet'; presetList.appendChild(none); }
+    if (keep) presetList.value = keep;
+    if (presetList.selectedIndex < 0) presetList.selectedIndex = 0;
+    document.getElementById('preset-load').disabled = document.getElementById('preset-delete').disabled = !presets.length;
+    presetConfirm.hidden = true;
+  }
+  function applyPreset(values) {      /* a preset is data from outside the page: each value is checked, and a missing one takes its first value */
+    if (values) {      /* a preset from before the clock values: the nearest one at the preset's tempo */
+      var bar = 240 / (Number(values.bpm) || 120), add = {};
+      var nearest = function (bars, seconds) { var best = 0; for (var n = 1; n < bars.length; n++) if (Math.abs(Math.log(bars[n] * bar / seconds)) < Math.abs(Math.log(bars[best] * bar / seconds))) best = n; return best; };
+      if (values.rlen === undefined && isFinite(Number(values.size))) add.rlen = nearest(T.lengths, 0.15 * Math.pow(2, Number(values.size) / 127 * 4));
+      if (values.ldiv === undefined && isFinite(Number(values.lrate))) add.ldiv = nearest(T.lfoBars, 1 / (0.05 * Math.pow(2, Number(values.lrate) / 127 * 8.64)));
+      if (values.ddiv === undefined && isFinite(Number(values.dtime))) add.ddiv = nearest(T.delayBars, 0.01 * Math.pow(2, Number(values.dtime) / 127 * 5.64));
+      values = Object.assign({}, values, add);
+    }
+    for (var id in controls) {
+      var c = controls[id], v = Number(values && values[id]);
+      value[id] = values && values[id] !== undefined && isFinite(v) ? Math.max(c.low, Math.min(c.high, Math.round(v))) : c.first;
+      c.input.value = value[id]; c.show();
+    }
+    send({ set: copy() }); setSpan(); drawPattern(); patternText(); redraw(true);
+  }
+  function localWrite() { try { localStorage.setItem(LOCAL, JSON.stringify(presets)); return true; } catch (e) { return false; } }
+  function saveFailed(error) { console.error('DR1 Kick: the preset was not saved.', error && error.code); tell('The preset was not saved. Check your connection and try again.'); }
+  document.getElementById('preset-save').addEventListener('click', function () {
+    var name = presetName.value.trim(), id = slug(name), one = { name: name, values: copy(), savedAt: new Date().toISOString() };
+    if (!id) { tell('Give the preset a name with a letter or a digit.'); presetName.focus(); return; }
+    var was = presets.some(function (p) { return p.id === id; });
+    function done() { presetList.value = id; tell((was ? 'Replaced ' : 'Saved ') + '“' + name + '”.'); }
+    if (store) store.collection('presets').doc(id).set(one).then(done, saveFailed);
+    else {
+      presets = presets.filter(function (p) { return p.id !== id; }); one.id = id; presets.push(one);
+      if (localWrite()) { showPresets(); done(); } else tell('The preset was not saved. This browser does not let the page keep data.');
+    }
+  });
+  document.getElementById('preset-load').addEventListener('click', function () {
+    var one = chosen(); if (!one) return;
+    applyPreset(one.values); presetName.value = one.name; tell('Loaded “' + one.name + '”.');
+  });
+  document.getElementById('preset-delete').addEventListener('click', function () { if (chosen()) { presetConfirm.hidden = false; document.getElementById('preset-no').focus(); } });
+  document.getElementById('preset-no').addEventListener('click', function () { presetConfirm.hidden = true; document.getElementById('preset-delete').focus(); });
+  presetList.addEventListener('change', function () { presetConfirm.hidden = true; });
+  document.getElementById('preset-yes').addEventListener('click', function () {
+    var one = chosen(); if (!one) return;
+    function done() { tell('Deleted “' + one.name + '”.'); presetList.focus(); }
+    if (store) store.collection('presets').doc(one.id).delete().then(done, function (error) { console.error('DR1 Kick: the preset was not deleted.', error && error.code); tell('The preset was not deleted. Check your connection and try again.'); });
+    else { presets = presets.filter(function (p) { return p.id !== one.id; }); localWrite(); showPresets(); done(); }
+  });
+  function localPresets() {
+    try { presets = (JSON.parse(localStorage.getItem(LOCAL)) || []).filter(function (p) { return p && p.id && p.name; }); } catch (e) { presets = []; }
+    presetNote = 'The presets stay in this browser only.'; showPresets(); tell('');
+  }
+  showPresets(); tell('Loading the presets…');
+  (window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null)).then(function (db) {
+    if (!db) { localPresets(); return; }
+    store = db;
+    var slow = setTimeout(function () { tell('The presets cannot be reached yet.'); }, 10000), firstAnswer = true;
+    db.collection('presets').onSnapshot(function (snap) {
+      presets = snap.docs.map(function (doc) { var body = doc.data() || {}; return { id: doc.id, name: String(body.name || doc.id).slice(0, 40), values: body.values }; });
+      showPresets();
+      if (!snap.metadata.fromCache) { clearTimeout(slow); if (firstAnswer) { firstAnswer = false; tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Save.'); } }
+    }, function (error) {
+      clearTimeout(slow); console.error('DR1 Kick: the presets did not load.', error && error.code);
+      store = null; localPresets(); tell('The presets of the page did not load.');
+    });
+  }, localPresets);
+
+  var first = 'body';
+  try { var saved = localStorage.getItem('dr1-kick-tab'); if (TABS.indexOf(saved) >= 0) first = saved; } catch (e) { /* no storage */ }
+  setSpan(); rest(); openTab(first, false); fit(); drawPattern(); patternText();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { redraw(false); });
+})();
+</script>
+</body>
+</html>
