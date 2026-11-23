@@ -132,7 +132,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 42</p>
+      <p class="version">Draft 43</p>
     </div>
     <div class="device">
       <div class="row">
@@ -1118,6 +1118,7 @@ function makeKickEngine(outRate) {
 
   /* ---- the presets: kept with the page (its database), or in this browser when the page has none ---- */
   var presets = [], store = null, LOCAL = 'dr1-kick-presets';
+  var DRAFT = Number(document.querySelector('.version').textContent.replace(/\D/g, ''));      /* the draft of the page, kept with each preset and each copy it writes: a later draft that changes a knob's range can then convert the ones from before. One from before Draft 43 has none */
   var presetList = document.getElementById('preset-list'), presetName = document.getElementById('preset-name'), presetStatus = document.getElementById('preset-status');
   var presetConfirm = document.getElementById('preset-confirm'), presetNote = '';
   function tell(text) { presetStatus.textContent = text + (presetNote ? ' ' + presetNote : ''); }
@@ -1164,7 +1165,7 @@ function makeKickEngine(outRate) {
   function saveFailed(error) { console.error('DR1 Kick: the preset was not saved.', error && error.code); tell('The preset was not saved. Check your connection and try again.'); }
   function byId(id) { for (var i = 0; i < presets.length; i++) if (presets[i].id === id) return presets[i]; return null; }
   function savePreset(id, one) {      /* a promise: the preset is in the page's database, or in this browser */
-    presets = presets.filter(function (p) { return p.id !== id; }); presets.push({ id: id, name: one.name, values: one.values, savedAt: one.savedAt });
+    presets = presets.filter(function (p) { return p.id !== id; }); presets.push({ id: id, name: one.name, values: one.values, savedAt: one.savedAt, draft: one.draft });
     if (store) return store.collection('presets').doc(id).set(one);
     return localWrite() ? Promise.resolve() : Promise.reject({ code: 'storage' });
   }
@@ -1183,7 +1184,7 @@ function makeKickEngine(outRate) {
   }
   function localWorkWrite() { try { localStorage.setItem(LOCAL_WORK, JSON.stringify(work)); return true; } catch (e) { return false; } }
   function writeWork(key, values) {
-    work[key] = { values: values, savedAt: new Date().toISOString() };
+    work[key] = { values: values, savedAt: new Date().toISOString(), draft: DRAFT };
     if (store) return store.collection('working').doc(key).set(work[key]);
     return localWorkWrite() ? Promise.resolve() : Promise.reject({ code: 'storage' });
   }
@@ -1229,7 +1230,7 @@ function makeKickEngine(outRate) {
   updateButton.addEventListener('click', function () {
     var one = byId(openId); if (!one) return;
     forgetSave();
-    savePreset(one.id, { name: one.name, values: copy(), savedAt: new Date().toISOString() }).then(function () { return dropWork(one.id); })
+    savePreset(one.id, { name: one.name, values: copy(), savedAt: new Date().toISOString(), draft: DRAFT }).then(function () { return dropWork(one.id); })
       .then(function () { showPresets(); tell('Updated “' + one.name + '”.'); }, saveFailed);
   });
   document.getElementById('preset-save').addEventListener('click', function () {
@@ -1237,7 +1238,7 @@ function makeKickEngine(outRate) {
     if (!id) { tell('Give the preset a name with a letter or a digit.'); presetName.focus(); return; }
     if (byId(id)) { tell('A preset has this name. Give another name, or use Update Original.'); presetName.focus(); return; }
     forgetSave();
-    savePreset(id, { name: name, values: copy(), savedAt: new Date().toISOString() }).then(function () { return dropWork(from); })      /* the changes go to the new preset: the one they came from is as it was saved */
+    savePreset(id, { name: name, values: copy(), savedAt: new Date().toISOString(), draft: DRAFT }).then(function () { return dropWork(from); })      /* the changes go to the new preset: the one they came from is as it was saved */
       .then(function () { openId = id; remember(); showPresets(); presetList.value = id; presetName.value = ''; tell('Created “' + name + '”. It is the open preset now.'); }, saveFailed);
   });
   revertButton.addEventListener('click', function () { revertConfirm.hidden = false; document.getElementById('revert-no').focus(); });
@@ -1279,7 +1280,7 @@ function makeKickEngine(outRate) {
       store = null; localPresets(); tell('The presets of the page did not load.');
     }
     db.collection('presets').onSnapshot(function (snap) {
-      presets = snap.docs.map(function (doc) { var body = doc.data() || {}; return { id: doc.id, name: String(body.name || doc.id).slice(0, 40), values: body.values }; });
+      presets = snap.docs.map(function (doc) { var body = doc.data() || {}; return { id: doc.id, name: String(body.name || doc.id).slice(0, 40), values: body.values, draft: body.draft }; });
       showPresets();
       if (!snap.metadata.fromCache) { clearTimeout(slow); gotPresets = true; restore(); if (firstAnswer) { firstAnswer = false; tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Create New Preset.'); } }
     }, failed);
