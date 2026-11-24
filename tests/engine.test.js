@@ -181,4 +181,23 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.ok(Math.abs(hz({ pitch1: 12, pitch2: 36, bmod: 60 }) - 65.406) < 0.01, 'PITCH between C1 and C3 is not C2');
 }
 
+/* the sequencer: each step that is on in `pat` (step 1 is its lowest bit) hits the kick, over STEPS steps, and DIVISION is the number of steps in a bar */
+{
+  const played = (values, seconds) => {      /* the steps that hit, in order */
+    const core = makeCore(RATE), steps = []; let hits = 0;
+    core.message({ set: { rumble: 0, tex: 0, bpm: 120, ...values }, run: true });
+    for (let i = 0; i < RATE * seconds; i++) { core.tick(); if (core.hits !== hits) { hits = core.hits; steps.push(core.step); } }
+    return steps;
+  };
+  assert.deepStrictEqual(played({}, 1.99), [0, 4, 8, 12], 'a new kick does not play 4 hits in a bar');
+  assert.strictEqual(played({ pat: 0xffff, div: 0 }, 0.99).length, 2, 'DIVISION 1/4: not 4 steps in a bar');
+  assert.strictEqual(played({ pat: 0xffff, div: 3 }, 0.99).length, 8, 'DIVISION 1/16: not 16 steps in a bar');
+  assert.strictEqual(played({ pat: 0xffff, div: 4 }, 0.99).length, 12, 'DIVISION 1/16T: not 24 steps in a bar');
+  assert.strictEqual(played({ pat: 0xffff, div: 5 }, 0.99).length, 16, 'DIVISION 1/32: not 32 steps in a bar');
+  const burst = [0, 1, 2, 7, 8, 9, 12, 13].reduce((bits, step) => bits + 2 ** step, 0);      /* ...____...__.. */
+  assert.deepStrictEqual(played({ pat: burst, steps: 14, div: 5 }, 14 * 0.0625 - 0.01), [0, 1, 2, 7, 8, 9, 12, 13], 'the bursts of the pattern do not play as they are drawn');
+  assert.deepStrictEqual(played({ pat: burst, steps: 8, div: 5 }, 16 * 0.0625 - 0.01), [0, 1, 2, 7, 0, 1, 2, 7], 'STEPS does not set the length of the pattern');
+  assert.deepStrictEqual(played({ pat: 2 ** 31, steps: 32, div: 5 }, 1.99), [31], 'step 32 does not play');
+}
+
 console.log('engine: all tests pass');
