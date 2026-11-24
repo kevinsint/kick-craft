@@ -86,8 +86,11 @@ section { display: grid; gap: var(--s2); }
 .dial[aria-disabled="true"]::after { display: none; }
 
 /* a push button under each column of knobs: it shows the knobs of that part below */
-.part { box-sizing: border-box; width: 36px; height: 36px; padding: 0; border-radius: 4px; border: 2px solid var(--c); background: #000; color: #15191d; font: 600 1rem var(--mono); cursor: pointer; }
-.part[aria-pressed="true"] { background: var(--c); }
+.part, .solo { box-sizing: border-box; width: 36px; height: 36px; padding: 0; border-radius: 4px; border: 2px solid var(--c); background: #000; color: #15191d; font: 600 1rem var(--mono); cursor: pointer; }
+.part[aria-pressed="true"], .solo[aria-pressed="true"] { background: var(--c); }
+/* SOLO, over the knobs of each part: an S, in a dashed frame while it is off */
+.solo { border-style: dashed; color: var(--c); }
+.solo[aria-pressed="true"] { border-style: solid; color: #15191d; }
 .part[aria-pressed="true"]::before { content: "\25CF"; content: "\25CF" / ""; }      /* the first one for a browser that does not know the second */
 .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--s1) var(--s2); }
 .knob { display: grid; gap: 0; font-family: var(--mono); min-width: 0; align-content: start; }
@@ -130,7 +133,7 @@ section { display: grid; gap: var(--s2); }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 61</p>
+      <p class="version">Draft 62</p>
     </div>
     <div class="device">
       <div class="row">
@@ -138,7 +141,6 @@ section { display: grid; gap: var(--s2); }
         <button class="btn run" type="button">Play</button>
         <button class="btn" id="seq-open" type="button" aria-haspopup="dialog">SEQ…</button>
         <button class="btn" id="presets-open" type="button" aria-haspopup="dialog">Presets…</button>
-        <button class="btn" id="solo" type="button" aria-pressed="false">Solo Part</button>
         <label class="pick" for="span">Show <select id="span"><option value="0.125">1/8 bar</option><option value="0.25">1/4 bar</option><option value="0.5">1/2 bar</option><option value="1" selected>1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option></select></label>
         <div class="sees" role="group" aria-label="Waves in the picture">
           <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Part</button>
@@ -198,6 +200,11 @@ section { display: grid; gap: var(--s2); }
           <div class="dials">
             <span class="hidden-text" id="dials-hint">The same value as the MOD LEVEL slider of the layer. Off while the layer has one marker: select the layer and add a marker.</span>
             <span class="corner"></span><span aria-hidden="true">CLICK</span><span aria-hidden="true">BODY</span><span aria-hidden="true">TEXTURE</span><span aria-hidden="true">RUMBLE</span>
+            <span class="of" aria-hidden="true">SOLO</span>
+            <button class="solo" id="solo-click" type="button" aria-pressed="false" aria-label="Solo CLICK" style="--c:#ff8ad8">S</button>
+            <button class="solo" id="solo-body" type="button" aria-pressed="false" aria-label="Solo BODY" style="--c:#5adee6">S</button>
+            <button class="solo" id="solo-texture" type="button" aria-pressed="false" aria-label="Solo TEXTURE" style="--c:#b79cff">S</button>
+            <button class="solo" id="solo-rumble" type="button" aria-pressed="false" aria-label="Solo RUMBLE" style="--c:#8be36b">S</button>
             <span class="of" aria-hidden="true">MOD LEVEL</span>
             <span class="dial" id="dial-c" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="CLICK MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#ff8ad8"></span>
             <span class="dial" id="dial-b" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="BODY MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#5adee6"></span>
@@ -676,9 +683,9 @@ function makeKickEngine(outRate) {
     { id: 'trigs', name: 'TRIGS', where: 'STEPS set', min: 1, max: 32, value: 4, text: plain },
     { id: 'shift', name: 'SHIFT', where: 'STEPS set', min: 0, max: 31, value: 0, text: plain }
   ];
-  var value = {}, controls = {}, tab = 'click', soloOn = false;
+  var value = {}, controls = {}, tab = 'click', soloPart = 'all';      /* `soloPart`: the one part that is heard alone, or 'all' */
   function copy() { var o = {}; for (var k in value) o[k] = value[k]; return o; }
-  function soloLayer() { return soloOn ? tab : 'all'; }
+  function soloLayer() { return soloPart; }
 
   /* ---- the sound: the engine in the browser's audio thread; in the page's own thread when the browser refuses that ---- */
   var audio = null, post = null, pending = [], readout = document.getElementById('readout'), engineLine = document.getElementById('engine');
@@ -1127,14 +1134,13 @@ function makeKickEngine(outRate) {
       document.getElementById('panel-' + t).hidden = document.getElementById('slide-' + t).hidden = t !== name;
     });
     try { localStorage.setItem('dr1-kick-tab', name); } catch (e) { /* no storage: the page opens on the first part */ }
-    send({ solo: soloLayer() });
     showSees(); redraw(false);
   }
   PARTS.forEach(function (t) { document.getElementById('part-' + t).addEventListener('click', function () { openPart(t); }); });
 
   /* ---- the buttons ---- */
   var deviceBox = document.querySelector('.device');
-  var runButtons = [].slice.call(document.querySelectorAll('.run')), seqBox = document.getElementById('seq'), seqOpen = document.getElementById('seq-open'), soloButton = document.getElementById('solo'), running = false;
+  var runButtons = [].slice.call(document.querySelectorAll('.run')), seqBox = document.getElementById('seq'), seqOpen = document.getElementById('seq-open'), running = false;
   function hit() { if (ready()) send({ hit: 1 }); }
   document.getElementById('hit').addEventListener('click', hit);
   runButtons.forEach(function (button) {      /* Play is in the top row and in the sequencer: one state, two buttons */
@@ -1152,9 +1158,12 @@ function makeKickEngine(outRate) {
   var presetsBox = document.getElementById('presets'), presetsOpen = document.getElementById('presets-open');      /* the presets: a dialog below its button, as the sequencer */
   presetsOpen.addEventListener('click', function () { presetsBox.style.top = Math.round(presetsOpen.getBoundingClientRect().bottom + window.scrollY + 8) + 'px'; presetsBox.showModal(); });
   document.getElementById('presets-close').addEventListener('click', function () { presetsBox.close(); });
-  soloButton.addEventListener('click', function () {
-    soloOn = !soloOn; soloButton.setAttribute('aria-pressed', String(soloOn));
-    send({ solo: soloLayer() });
+  PARTS.forEach(function (t) {      /* SOLO: one part at a time; a second press of the same button gives all the parts back */
+    document.getElementById('solo-' + t).addEventListener('click', function () {
+      soloPart = soloPart === t ? 'all' : t;
+      PARTS.forEach(function (other) { document.getElementById('solo-' + other).setAttribute('aria-pressed', String(other === soloPart)); });
+      send({ solo: soloLayer() });
+    });
   });
   document.getElementById('span').addEventListener('change', function () { setSpan(); redraw(true); });
   window.addEventListener('keydown', function (e) {
