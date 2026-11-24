@@ -24,6 +24,8 @@ Then open `http://localhost:8000`. From a file, the engine runs in the page's ow
 
 The presets you save stay in your browser.
 
+In Presets, Share Kick copies a link with the kick as it plays now: one value for each knob, with no markers. The person who opens the link gets it as a temporary kick, and no saved preset changes. Export Preset writes a file with all the markers, and Import Preset… adds a file as a new preset. A link needs the page at a web address: a link made from a file on your disk opens only on your computer.
+
 ## Test it
 
 ```sh

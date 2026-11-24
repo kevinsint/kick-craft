@@ -133,7 +133,7 @@ section { display: grid; gap: var(--s2); }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 63</p>
+      <p class="version">Draft 64</p>
     </div>
     <div class="device">
       <div class="row">
@@ -315,6 +315,13 @@ section { display: grid; gap: var(--s2); }
               </span>
               <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
               <button class="btn main" id="preset-save" type="button">Create New Preset</button>
+          </div>
+          <div class="presets">
+              <button class="btn" id="share" type="button">Share Kick</button>
+              <button class="btn" id="preset-export" type="button">Export Preset</button>
+              <button class="btn" id="preset-import" type="button">Import Preset…</button>
+              <input id="preset-file" type="file" accept=".json,application/json" hidden>
+              <div class="field" id="share-box" hidden><label for="share-link">Link</label><input id="share-link" type="text" readonly></div>
           </div>
           <p class="hint" id="open-text"></p>
           <p class="hint" id="preset-status" role="status"></p>
@@ -612,6 +619,34 @@ function makeKickEngine(outRate) {
         for (var j = 0; j < TAPS; j++) acc += taps[j] * buf[(at - 1 - j) & 63];
         out[n] = acc > 1 ? 1 : acc < -1 ? -1 : acc;
       }
+    }
+  };
+}
+
+/* ==== Share. A link holds the kick as it plays now: one value for each knob, with no marker. It uses nothing from the page ==== */
+function kickShare() {
+  var T = kickTimes();
+  return {
+    /* `groups`: the knobs of each MOD LEVEL ({ b: ['level', ...], ... }). Each takes its value at the MOD LEVEL, under its plain name, as a preset from before the markers */
+    flat: function (values, groups) {
+      var out = {}, marker = {}, g, k;
+      for (g in groups) {
+        marker[g + 'pts'] = marker[g + 'mod'] = true;
+        groups[g].forEach(function (id) { out[id] = Math.round(T.morph(values, id, g)); for (var n = 1; n <= 5; n++) marker[id + n] = true; });
+      }
+      for (k in values) if (!marker[k] && !(k in out)) out[k] = values[k];
+      return out;
+    },
+    pack: function (values, draft) { return btoa(JSON.stringify({ d: draft, v: values })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''); },
+    /* a link is data from outside the page: null when it is not an object of numbers */
+    unpack: function (text) {
+      try {
+        if (typeof text !== 'string' || text.length > 4000) return null;
+        var kick = JSON.parse(atob(text.replace(/-/g, '+').replace(/_/g, '/'))), v = kick && kick.v;
+        if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+        for (var k in v) if (typeof v[k] !== 'number' || !isFinite(v[k])) return null;
+        return { draft: Number(kick.d) || 0, values: v };
+      } catch (e) { return null; }
     }
   };
 }
@@ -1179,10 +1214,13 @@ function makeKickEngine(outRate) {
   var presets = [], store = null, LOCAL = 'dr1-kick-presets';
   var DRAFT = Number(document.querySelector('.version').textContent.replace(/\D/g, ''));      /* the draft of the page, kept with each preset and each copy it writes: a later draft that changes a knob's range can then convert the ones from before. One from before Draft 43 has none */
   var presetList = document.getElementById('preset-list'), presetName = document.getElementById('preset-name'), presetStatus = document.getElementById('preset-status');
-  var presetConfirm = document.getElementById('preset-confirm'), presetNote = '';
+  var presetConfirm = document.getElementById('preset-confirm'), presetNote = '', tellAgain = 0;
   function tell(text) {      /* in the dialog, and below the picture while the dialog is closed: a save that failed must be seen from the page */
-    presetStatus.textContent = text + (presetNote ? ' ' + presetNote : '');
-    document.getElementById('page-status').textContent = presetsBox.open ? '' : presetStatus.textContent;
+    var line = text + (presetNote ? ' ' + presetNote : ''), pageLine = document.getElementById('page-status');
+    function show() { presetStatus.textContent = line; pageLine.textContent = presetsBox.open ? '' : line; }
+    clearTimeout(tellAgain);
+    if (line && line === presetStatus.textContent) { presetStatus.textContent = pageLine.textContent = ''; tellAgain = setTimeout(show, 50); }      /* the same message again (a second Share Kick): a screen reader says a line only when it changes */
+    else show();
   }
   function slug(name) { return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); }
   function chosen() { for (var i = 0; i < presets.length; i++) if (presets[i].id === presetList.value) return presets[i]; return null; }
@@ -1237,13 +1275,14 @@ function makeKickEngine(outRate) {
 
   /* ---- the working copies. Load opens a copy of a preset, and each change of a knob is saved in that copy (`work`, one for each preset, and one for the
      kick with no preset). The saved preset changes only with Update Original. A preset has changes when it has a working copy ---- */
-  var work = {}, openId = '', NEW = '_new', LOCAL_WORK = 'dr1-kick-working', OPEN = 'dr1-kick-open';
+  var work = {}, openId = '', NEW = '_new', TEMP = '_shared',      /* TEMP: the kick of a link is open. It is in no preset and no copy, so it replaces nothing, and a reload goes back to the preset from before */ LOCAL_WORK = 'dr1-kick-working', OPEN = 'dr1-kick-open';
   var applying = false, touched = false, restored = false, gotPresets = false, gotWork = false, saveTimer = 0, saveBad = false;
   var openText = document.getElementById('open-text'), updateButton = document.getElementById('preset-update'), revertButton = document.getElementById('preset-revert'), revertConfirm = document.getElementById('revert-confirm');
   function workKey() { return openId || NEW; }
   function showOpen() {
     var one = byId(openId), changed = !!work[workKey()];
-    openText.textContent = one ? 'Open: a copy of “' + one.name + '”, ' + (changed ? 'with changes that are not in the saved preset.' : 'with no change.')
+    openText.textContent = openId === TEMP ? 'Open: a shared kick. It is not saved. Give a name and press Create New Preset to keep it.'
+      : one ? 'Open: a copy of “' + one.name + '”, ' + (changed ? 'with changes that are not in the saved preset.' : 'with no change.')
       : 'No preset is open.' + (changed ? ' Your changes are kept.' : '');
     updateButton.disabled = !one || !changed; revertButton.disabled = !changed; revertConfirm.hidden = true;
   }
@@ -1265,7 +1304,7 @@ function makeKickEngine(outRate) {
       function (error) { console.error('DR1 Kick: the changes were not saved.', error && error.code); if (!saveBad) { saveBad = true; tell('Your changes were not saved. Check your connection.'); } });
   }
   function changedByHand() {      /* from send(): a knob moved. The copy is written 0.8 s after the first move, not at each step of a slider */
-    if (applying) return;
+    if (applying || openId === TEMP) return;
     touched = true;
     if (!work[workKey()]) { work[workKey()] = { values: null }; showOpen(); }
     if (!saveTimer) saveTimer = setTimeout(autoSave, 800);
@@ -1282,6 +1321,7 @@ function makeKickEngine(outRate) {
   function restore() {      /* once, when the presets and the copies are here: the page opens as you left it */
     if (restored || (store && !(gotPresets && gotWork))) return;
     restored = true;
+    if (fromLink()) return;
     var id = '';
     try { id = localStorage.getItem(OPEN) || ''; } catch (e) { /* no storage */ }
     if (!byId(id)) id = '';
@@ -1329,6 +1369,51 @@ function makeKickEngine(outRate) {
     if (store) store.collection('presets').doc(one.id).delete().then(done, function (error) { console.error('DR1 Kick: the preset was not deleted.', error && error.code); tell('The preset was not deleted. Check your connection and try again.'); });
     else { presets = presets.filter(function (p) { return p.id !== one.id; }); localWrite(); done(); }
   });
+  /* ---- share, export, import. Share Kick: a link with the kick as it plays now, with no marker. Export Preset: a file with all the markers. A link opens as
+     a temporary kick, and a file becomes a new preset: no one replaces a saved preset ---- */
+  var share = kickShare(), GROUPS = {}, shareLink = document.getElementById('share-link'), importFile = document.getElementById('preset-file');
+  [['b', BODY_MARKER], ['t', TEXTURE_MARKER], ['c', MARKER], ['r', RUMBLE_MARKER]].forEach(function (g) { GROUPS[g[0]] = g[1].map(function (k) { return k.id; }); });
+  function fromLink() {      /* true when the page's address had a kick */
+    var found = /^#kick=(.+)$/.exec(location.hash); if (!found) return false;
+    var kick = share.unpack(found[1]);
+    history.replaceState(null, '', location.pathname + location.search);      /* the link is used once: a reload opens the page as you left it */
+    if (!kick) { showOpen(); tell('This link has no kick. Ask for a new link.'); return true; }
+    saveNow(); openId = TEMP;
+    applying = true; applyPreset(kick.values); applying = false;
+    showOpen(); tell('A shared kick is open. Press Hit to hear it.');      /* the focus stays where it is: a move would cut this line in a screen reader */
+    return true;
+  }
+  window.addEventListener('hashchange', function () { if (restored) fromLink(); });
+  document.getElementById('share').addEventListener('click', function () {
+    var link = location.href.split('#')[0] + '#kick=' + share.pack(share.flat(copy(), GROUPS), DRAFT);
+    shareLink.value = link; document.getElementById('share-box').hidden = false;
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { tell('Link copied. It holds the kick as it plays now, with no markers.'); },
+      function () { shareLink.focus(); shareLink.select(); tell('Copy the link from the Link box.'); });
+  });
+  document.getElementById('preset-export').addEventListener('click', function () {
+    var one = byId(openId), name = one ? one.name : 'Kick', a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: 'kick-craft', name: name, draft: DRAFT, values: copy() })], { type: 'application/json' }));
+    a.download = slug(name) + '.kick.json'; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    tell('Exported “' + name + '” with all its markers.');
+  });
+  document.getElementById('preset-import').addEventListener('click', function () { importFile.click(); });
+  importFile.addEventListener('change', function () {
+    var file = importFile.files[0]; importFile.value = ''; if (!file) return;
+    function notPreset(error) { console.error('Kick Craft: the file was not imported.', error && error.name); tell('This file is not a Kick Craft preset. Choose a file from Export Preset.'); document.getElementById('preset-import').focus(); }
+    if (file.size > 100000) { notPreset(); return; }
+    file.text().then(function (text) {      /* a file is data from outside the page: only its numbers are kept, and its name is text */
+      var body = JSON.parse(text), values = {}, base = String(body.name || '').trim().slice(0, 36), name, n;
+      if (!body.values || typeof body.values !== 'object' || Array.isArray(body.values)) throw new TypeError('no values');
+      for (var k in body.values) if (typeof body.values[k] === 'number' && isFinite(body.values[k])) values[k] = body.values[k];
+      if (!slug(base)) base = 'Imported';
+      for (name = base, n = 2; byId(slug(name)); n++) name = base + ' ' + n;      /* a preset with this name stays: the file takes the next free name */
+      return { name: name, values: values, savedAt: new Date().toISOString(), draft: Number(body.draft) || DRAFT };
+    }).then(function (one) {
+      var id = slug(one.name);
+      return savePreset(id, one).then(function () { showPresets(); presetList.value = id; openCopy(id); tell('Imported “' + one.name + '”. It is the open preset now.'); }, saveFailed);
+    }, notPreset);
+  });
   function localPresets() {
     try { presets = (JSON.parse(localStorage.getItem(LOCAL)) || []).filter(function (p) { return p && p.id && p.name; }); } catch (e) { presets = []; }
     try { work = JSON.parse(localStorage.getItem(LOCAL_WORK)) || {}; } catch (e) { work = {}; }
@@ -1347,7 +1432,7 @@ function makeKickEngine(outRate) {
     db.collection('presets').onSnapshot(function (snap) {
       presets = snap.docs.map(function (doc) { var body = doc.data() || {}; return { id: doc.id, name: String(body.name || doc.id).slice(0, 40), values: body.values, draft: body.draft }; });
       showPresets();
-      if (!snap.metadata.fromCache) { clearTimeout(slow); gotPresets = true; restore(); if (firstAnswer) { firstAnswer = false; tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Create New Preset.'); } }
+      if (!snap.metadata.fromCache) { clearTimeout(slow); gotPresets = true; restore(); if (firstAnswer) { firstAnswer = false; if (openId !== TEMP) tell(presets.length ? '' : 'No presets yet. Set the knobs, give a name and press Create New Preset.'); } }
     }, failed);
     db.collection('working').onSnapshot(function (snap) {      /* the copies, as the database has them; the one in hand stays as the page has it */
       var fresh = {}, mine = work[workKey()];

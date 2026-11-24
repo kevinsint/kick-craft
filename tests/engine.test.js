@@ -8,7 +8,7 @@ const path = require('node:path');
 
 const page = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const engine = page.match(/<script>\n\/\* SPDX[\s\S]*?<\/script>/)[0].replace(/<\/?script>/g, '');
-const { makeCore, makeKickEngine } = new Function(engine + '; return { makeCore, makeKickEngine };')();
+const { makeCore, makeKickEngine, kickShare } = new Function(engine + '; return { makeCore, makeKickEngine, kickShare };')();
 const RATE = 96000;
 
 /* one hit from silence: the layers' samples for `seconds` */
@@ -276,6 +276,19 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.notDeepStrictEqual(two, whole.rumble, 'SOLO of the click and the rumble is the rumble alone');
   assert.ok(two.every((v, i) => Math.abs(v - whole.click[i] - whole.rumble[i]) < 1e-6), 'SOLO of the click and the rumble is not their sum');
   assert.notDeepStrictEqual(out(['body', 'texture']).out, whole.all, 'SOLO of the body and the texture is the whole kick');
+}
+
+/* Share: the link holds the kick as it plays now, one value for each knob at its MOD LEVEL, with no marker; and only numbers come back from a link */
+{
+  const share = kickShare(), groups = { b: ['level', 'pitch'], c: ['click', 'mode'] };
+  const values = { bpm: 128, bvol: 100, pat: 2 ** 31, bpts: 1, bmod: 30, level: 5, level1: 0, level2: 100, level3: 50, pitch: 9, pitch1: 24, pitch2: 30, pitch3: 36, cpts: -1, cmod: 0, click: 1, click1: 71, click2: 9, mode: 0, mode1: 2, mode2: 0 };
+  const flat = share.flat(values, groups);
+  assert.deepStrictEqual(flat, { bpm: 128, bvol: 100, pat: 2 ** 31, level: 50, pitch: 27, click: 71, mode: 2 }, 'the shared kick is not the values at the MOD LEVEL, with no marker');
+  assert.deepStrictEqual(share.unpack(share.pack(flat, 64)), { draft: 64, values: flat }, 'a link does not give back the kick it was made from');
+  assert.match(share.pack(flat, 64), /^[A-Za-z0-9_-]+$/, 'a link has a character that a URL changes');
+  const code = (thing) => Buffer.from(JSON.stringify(thing)).toString('base64url');
+  for (const bad of ['', '%%%', code(5), code({ d: 64 }), code({ d: 64, v: [1] }), code({ d: 64, v: { level: '<b>' } }), code({ d: 64, v: { level: null } }), 'A'.repeat(9000)])
+    assert.strictEqual(share.unpack(bad), null, 'a link that is not a kick is taken: ' + bad.slice(0, 20));
 }
 
 console.log('engine: all tests pass');
