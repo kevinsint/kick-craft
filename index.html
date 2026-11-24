@@ -82,8 +82,8 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
   .dials .of { grid-column: 1 / -1; justify-self: start; }
   .dials .corner { display: none; }
 }
-.dial { position: relative; box-sizing: border-box; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--c); background: #000; cursor: ns-resize; touch-action: none; }
-.dial::after { content: ""; position: absolute; left: 50%; top: 4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--c); transform-origin: 50% 16px; transform: rotate(var(--turn, -135deg)); }
+.dial { position: relative; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--c); background: #000; cursor: ns-resize; touch-action: none; }
+.dial::after { content: ""; position: absolute; left: 50%; top: 3px; width: 4px; height: 13px; margin-left: -2px; border-radius: 2px; background: var(--c); transform-origin: 50% 13px; transform: rotate(var(--turn, -135deg)); }
 .dial[aria-disabled="true"] { border-style: dashed; border-color: var(--dev-edge); cursor: default; }
 .dial[aria-disabled="true"]::after { display: none; }
 
@@ -151,7 +151,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 52</p>
+      <p class="version">Draft 55</p>
     </div>
     <div class="device">
       <div class="row">
@@ -159,7 +159,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
         <button class="btn run" type="button">Play</button>
         <button class="btn" id="seq-open" type="button" aria-haspopup="dialog">SEQ…</button>
         <button class="btn" id="solo" type="button" aria-pressed="false">Solo Tab</button>
-        <label class="pick" for="span">Show <select id="span"><option value="1" selected>1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option></select></label>
+        <label class="pick" for="span">Show <select id="span"><option value="0.125">1/8 bar</option><option value="0.25">1/4 bar</option><option value="0.5">1/2 bar</option><option value="1" selected>1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option></select></label>
         <div class="sees" role="group" aria-label="Waves in the picture">
           <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Tab</button>
           <button class="btn see" id="see-all" type="button" aria-pressed="true" style="--c:#b4bcc4"><span class="line"></span>ALL</button>
@@ -345,7 +345,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section aria-labelledby="h-what">
     <h2 id="h-what">What it is</h2>
     <p class="lede">A kick drum on OP6. It has three layers, and each one has its own attack. The body and the click are two oscillators of the same kind, with the controls of the Shakmat Battering Ram: a pitch, a sweep of the pitch, a decay. The click is the short one. The body has a second output, the texture: the body with noise, through a low-pass gate and a reverb. The rumble comes up after each hit, as on the Ohmforce Bohm. Any LFO of the bank plays it.</p>
-    <p>This page plays the same algorithm in your browser, sample by sample. “Show” sets the length of the picture: 1, 2 or 4 bars at the TEMPO. The lines of the picture are parts of a bar. Play hits the kick on the steps of the sequencer, and Stop ends it. SEQ opens the sequencer. The <span class="mono">K</span> key hits the kick while a control of the instrument has the focus. It stays as a web app when the kick is in the FM-1.</p>
+    <p>This page plays the same algorithm in your browser, sample by sample. “Show” sets the length of the picture: 1/8 of a bar to 4 bars at the TEMPO. The lines of the picture are parts of a bar. Play hits the kick on the steps of the sequencer, and Stop ends it. SEQ opens the sequencer. The <span class="mono">K</span> key hits the kick while a control of the instrument has the focus. It stays as a web app when the kick is in the FM-1.</p>
   </section>
 
   <section aria-labelledby="h-ram">
@@ -1134,7 +1134,7 @@ function makeKickEngine(outRate) {
     dial.addEventListener('pointermove', function (e) { if (dial.hasPointerCapture(e.pointerId)) turn(dragFrom + (dragY - e.clientY) * high / 150); });
     dial.addEventListener('keydown', function (e) {
       var by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: page, PageDown: -page, Home: -high, End: high }[e.key];
-      if (by) { e.preventDefault(); turn(shown + by); }
+      if (by && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); turn(shown + by); }      /* not Alt with an arrow: that is the browser's Back and Forward */
     });
     return function (v, text, off) {
       shown = v; dial.setAttribute('aria-valuenow', v); dial.setAttribute('aria-valuetext', text); dial.setAttribute('aria-disabled', String(off));
@@ -1142,13 +1142,13 @@ function makeKickEngine(outRate) {
     };
   }
   /* VOLUME, one for each layer: not a knob of a marker, so MOD LEVEL does not move it */
-  ['c', 'b', 't', 'r'].forEach(function (g) {
-    var id = g + 'vol', show = makeDial(document.getElementById('dial-' + id), 127, 16, function (v) {
+  ['c', 'b', 't', 'r'].forEach(function (g) {      /* the rotary knob only. No slider in the tab, so no way with no drag for a pointer: Kevin's decision, 2026-11-23 */
+    var id = g + 'vol', showDial = makeDial(document.getElementById('dial-' + id), 127, 16, function (v) {
       value[id] = Math.max(0, Math.min(127, Math.round(v))); controls[id].show();
       var one = {}; one[id] = value[id]; send({ set: one }); redraw(true);
     });
     value[id] = 127;
-    controls[id] = { input: {}, show: function () { show(value[id], String(value[id]), false); }, low: 0, high: 127, first: 127 };
+    controls[id] = { input: {}, show: function () { showDial(value[id], String(value[id]), false); }, low: 0, high: 127, first: 127 };
     controls[id].show();
   });
   var MORPHS = [];
