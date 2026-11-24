@@ -25,7 +25,7 @@ const allFinite = (wave) => wave.every(Number.isFinite);
 /* every click mode and drive type, at both ends of the knobs, through the output filter: no bad value, no overload */
 for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0, 127]) {
   const out = new Float32Array(48000), kick = makeKickEngine(48000);
-  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack: end, drive: end, rphase: end, sweep1: end, sweep2: 127 - end, depth2: end, curve2: end, bmod: end ? 120 : 50, bpts: end ? 3 : 0, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch1: end ? 60 : 0, pitch2: end ? 0 : 60, delay: end, dfbk: end, llevel: end, ldark: end, lper: end ? 13 : 0, lphase: end, tex: 127, tattack: end, tdecay: end, tcurve: end, topen: end, tnoise: end, trev: end, tsize: end, tlow: end, thigh: end, bpm: 200 }, run: true });
+  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack1: end, drive: end, rphase1: end, sweep1: end, sweep2: 127 - end, depth2: end, curve2: end, bmod: end ? 120 : 50, bpts: end ? 3 : 0, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch1: end ? 60 : 0, pitch2: end ? 0 : 60, delay1: end, dfbk1: end, llevel1: end, ldark1: end, lper1: end ? 13 : 0, lphase1: end, tex: 127, tattack1: end, tdecay1: end, tcurve1: end, topen1: end, tnoise1: end, trev1: end, tsize1: end, tlow1: end, thigh1: end, bpm: 200 }, run: true });
   kick.process(out);
   assert.ok(allFinite(out), `mode ${mode}, type ${type}, knobs at ${end}: a value is not a number`);
   assert.ok(peak(out) <= 1, `mode ${mode}, type ${type}, knobs at ${end}: the output is above full level`);
@@ -56,7 +56,7 @@ assert.deepStrictEqual(hit({ curve1: 20 }, 0.25).click, hit({ curve1: 96 }, 0.25
 
 /* the rumble ends on the clock: LENGTH is a part of a bar at the tempo, and it only closes the gate (SIZE at its top, so the tail is longer than each LENGTH) */
 for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 2], [2, 90, 1 / 4]]) {
-  const seconds = bars * 240 / bpm, rumble = hit({ rlen, bpm, rattack: 0, size: 127 }, seconds * 1.6 + 0.3).rumble, top = peak(rumble);
+  const seconds = bars * 240 / bpm, rumble = hit({ rlen1: rlen, bpm, rattack1: 0, size1: 127 }, seconds * 1.6 + 0.3).rumble, top = peak(rumble);
   let last = 0;
   rumble.forEach((v, i) => { if (Math.abs(v) > top / 1000) last = i; });
   assert.ok(last / RATE <= seconds * 1.02, `LENGTH ${bars} at ${bpm} BPM: the rumble goes on after ${seconds} s`);
@@ -65,7 +65,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 
 /* the TEMPO does not change the sound of a hit: the body and the click are the same, and the rumble is the same until its gate starts to close */
 {
-  const slow = hit({ bpm: 90, rlen: 3 }, 0.6), fast = hit({ bpm: 180, rlen: 3 }, 0.6), same = Math.floor(0.7 * (1 / 2 * 240 / 180) * RATE) - 1;
+  const slow = hit({ bpm: 90, rlen1: 3 }, 0.6), fast = hit({ bpm: 180, rlen1: 3 }, 0.6), same = Math.floor(0.7 * (1 / 2 * 240 / 180) * RATE) - 1;
   assert.deepStrictEqual(fast.body, slow.body, 'the body changed with the TEMPO');
   assert.deepStrictEqual(fast.click, slow.click, 'the click changed with the TEMPO');
   assert.ok(peak(slow.rumble.subarray(0, same)) > 0.01, 'the rumble is silent');
@@ -75,7 +75,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 /* SIZE is the reverb's own time, not on the clock: a larger SIZE leaves more of the tail at the same LENGTH and TEMPO */
 {
   const level = (wave) => Math.sqrt(wave.subarray(Math.floor(0.8 * RATE), Math.floor(1.2 * RATE)).reduce((sum, v) => sum + v * v, 0));
-  const small = hit({ size: 20, rlen: 4, rattack: 0 }, 1.3).rumble, large = hit({ size: 120, rlen: 4, rattack: 0 }, 1.3).rumble;
+  const small = hit({ size1: 20, rlen1: 4, rattack1: 0 }, 1.3).rumble, large = hit({ size1: 120, rlen1: 4, rattack1: 0 }, 1.3).rumble;
   assert.ok(level(large) > 10 * level(small), 'SIZE does not change the length of the reverb\'s tail');
 }
 
@@ -93,51 +93,51 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 {
   const end = (wave) => { const top = peak(wave); let last = 0; wave.forEach((v, i) => { if (Math.abs(v) > top / 100) last = i; }); return last / RATE; };
   const bright = (wave) => { let moves = 0, size = 0; for (let i = 1; i < wave.length; i++) { moves += (wave[i] - wave[i - 1]) ** 2; size += wave[i] ** 2; } return moves / size; };
-  const dry = { trev: 0, decay: 127 };      /* a long body, so the gate ends the texture and not the body */
-  const short = hit({ ...dry, tdecay: 20 }, 2).texture, long = hit({ ...dry, tdecay: 110 }, 2).texture;
+  const dry = { trev1: 0, decay: 127 };      /* a long body, so the gate ends the texture and not the body */
+  const short = hit({ ...dry, tdecay1: 20 }, 2).texture, long = hit({ ...dry, tdecay1: 110 }, 2).texture;
   assert.ok(end(short) < 0.1, 'a short DECAY does not close the gate');
   assert.ok(end(long) > 3 * end(short), 'DECAY does not change the length of the texture');
-  const late = hit({ ...dry, tattack: 127 }, 0.3).texture, atOnce = hit({ ...dry, tattack: 0 }, 0.3).texture;
+  const late = hit({ ...dry, tattack1: 127 }, 0.3).texture, atOnce = hit({ ...dry, tattack1: 0 }, 0.3).texture;
   assert.ok(peak(late.subarray(0, Math.floor(0.01 * RATE))) < 0.2 * peak(atOnce.subarray(0, Math.floor(0.01 * RATE))), 'ATTACK does not cut the start of the texture');
-  assert.ok(bright(hit({ ...dry, topen: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, topen: 0 }, 0.3).texture), 'OPEN does not change the brightness');
-  assert.ok(bright(hit({ ...dry, tnoise: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, tnoise: 0 }, 0.3).texture), 'NOISE adds no noise');
+  assert.ok(bright(hit({ ...dry, topen1: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, topen1: 0 }, 0.3).texture), 'OPEN does not change the brightness');
+  assert.ok(bright(hit({ ...dry, tnoise1: 127 }, 0.3).texture) > 10 * bright(hit({ ...dry, tnoise1: 0 }, 0.3).texture), 'NOISE adds no noise');
 }
 
 /* the gate's DCY CURVE: at 0 the gate falls fast at the start, at 127 it stays open and falls at the end; at each curve the texture is closed after DECAY */
 {
-  const dry = { trev: 0, decay: 127, tdecay: 80, tnoise: 127 }, seconds = 0.02 * Math.pow(2, 80 / 127 * 6.64);
+  const dry = { trev1: 0, decay: 127, tdecay1: 80, tnoise1: 127 }, seconds = 0.02 * Math.pow(2, 80 / 127 * 6.64);
   const level = (wave, from, to) => Math.sqrt(wave.subarray(Math.floor(from * seconds * RATE), Math.floor(to * seconds * RATE)).reduce((sum, v) => sum + v * v, 0));
-  const fast = hit({ ...dry, tcurve: 0 }, seconds * 1.5).texture, line = hit({ ...dry, tcurve: 42 }, seconds * 1.5).texture, held = hit({ ...dry, tcurve: 127 }, seconds * 1.5).texture;
+  const fast = hit({ ...dry, tcurve1: 0 }, seconds * 1.5).texture, line = hit({ ...dry, tcurve1: 42 }, seconds * 1.5).texture, held = hit({ ...dry, tcurve1: 127 }, seconds * 1.5).texture;
   assert.ok(level(line, 0.5, 0.8) > 3 * level(fast, 0.5, 0.8), 'DCY CURVE at 42 is not slower than at 0');
   assert.ok(level(held, 0.5, 0.8) > 1.5 * level(line, 0.5, 0.8), 'DCY CURVE at 127 does not keep the gate open');
   for (const wave of [fast, line, held]) assert.ok(level(wave, 1.1, 1.5) < 0.001 * level(wave, 0, 1), 'the texture goes on after DECAY');
 }
 
-/* the texture's reverb: REVERB at 0 leaves no tail after the gate, and SIZE is the length of the tail */
+/* the texture's reverb1: REVERB at 0 leaves no tail after the gate, and SIZE is the length of the tail */
 {
   const tail = (wave) => Math.sqrt(wave.subarray(Math.floor(0.6 * RATE), Math.floor(0.9 * RATE)).reduce((sum, v) => sum + v * v, 0));
-  const gate = { tdecay: 20, decay: 20 };
-  assert.ok(tail(hit({ ...gate, trev: 0 }, 1).texture) < 1e-6, 'the texture goes on with REVERB at 0');
-  assert.ok(tail(hit({ ...gate, trev: 127, tsize: 127 }, 1).texture) > 100 * tail(hit({ ...gate, trev: 127, tsize: 20 }, 1).texture), 'SIZE does not change the length of the tail');
+  const gate = { tdecay1: 20, decay: 20 };
+  assert.ok(tail(hit({ ...gate, trev1: 0 }, 1).texture) < 1e-6, 'the texture goes on with REVERB at 0');
+  assert.ok(tail(hit({ ...gate, trev1: 127, tsize1: 127 }, 1).texture) > 100 * tail(hit({ ...gate, trev1: 127, tsize1: 20 }, 1).texture), 'SIZE does not change the length of the tail');
 }
 
-/* the two filters at the texture's end, after its reverb: LOW CUT takes the lows out, HIGH CUT takes the highs out, and at their ends they are off */
+/* the two filters at the texture's end, after its reverb1: LOW CUT takes the lows out, HIGH CUT takes the highs out, and at their ends they are off */
 {
   const size = (wave) => Math.sqrt(wave.reduce((sum, v) => sum + v * v, 0));
   const moves = (wave) => { let total = 0; for (let i = 1; i < wave.length; i++) total += (wave[i] - wave[i - 1]) ** 2; return Math.sqrt(total); };
-  const lows = { tnoise: 0, drive: 0, topen: 127 }, highs = { tnoise: 127, topen: 127, level: 0 };      /* a texture of the body's sine only; a texture with much noise */
-  assert.ok(size(hit({ ...lows, tlow: 127 }, 0.5).texture) < 0.05 * size(hit({ ...lows, tlow: 0 }, 0.5).texture), 'LOW CUT leaves the lows');
-  assert.ok(moves(hit({ ...highs, thigh: 0 }, 0.5).texture) < 0.05 * moves(hit({ ...highs, thigh: 127 }, 0.5).texture), 'HIGH CUT leaves the highs');
-  assert.ok(moves(hit({ ...highs, tlow: 127 }, 0.5).texture) > 0.5 * moves(hit({ ...highs, tlow: 0 }, 0.5).texture), 'LOW CUT takes the highs out too');
-  assert.ok(size(hit({ ...lows, thigh: 0 }, 0.5).texture) > 0.5 * size(hit({ ...lows, thigh: 127 }, 0.5).texture), 'HIGH CUT takes the lows out too');
+  const lows = { tnoise1: 0, drive: 0, topen1: 127 }, highs = { tnoise1: 127, topen1: 127, level: 0 };      /* a texture of the body's sine only; a texture with much noise */
+  assert.ok(size(hit({ ...lows, tlow1: 127 }, 0.5).texture) < 0.05 * size(hit({ ...lows, tlow1: 0 }, 0.5).texture), 'LOW CUT leaves the lows');
+  assert.ok(moves(hit({ ...highs, thigh1: 0 }, 0.5).texture) < 0.05 * moves(hit({ ...highs, thigh1: 127 }, 0.5).texture), 'HIGH CUT leaves the highs');
+  assert.ok(moves(hit({ ...highs, tlow1: 127 }, 0.5).texture) > 0.5 * moves(hit({ ...highs, tlow1: 0 }, 0.5).texture), 'LOW CUT takes the highs out too');
+  assert.ok(size(hit({ ...lows, thigh1: 0 }, 0.5).texture) > 0.5 * size(hit({ ...lows, thigh1: 127 }, 0.5).texture), 'HIGH CUT takes the lows out too');
 }
 
 /* the rumble's LFO: LFO PER BAR is the number of its cycles in a bar at the tempo, and LFO PHASE is where in its cycle it starts */
 {
   const ups = (wave) => { let count = 0; for (let i = 1; i < wave.length; i++) if (wave[i - 1] < 0 && wave[i] >= 0) count++; return count; };
   const almostBar = 0.99 * 240 / 100;
-  for (const [lper, cycles] of [[2, 1], [4, 3], [5, 4], [9, 8]]) assert.strictEqual(ups(hit({ bpm: 100, lper }, almostBar).lfo), cycles - 1, `LFO PER BAR ${cycles}: not ${cycles} cycles in a bar`);
-  const from0 = hit({ lper: 3 }, 0.5).lfo, from180 = hit({ lper: 3, lphase: 64 }, 0.5).lfo, from90 = hit({ lper: 3, lphase: 32 }, 0.01).lfo;
+  for (const [lper, cycles] of [[2, 1], [4, 3], [5, 4], [9, 8]]) assert.strictEqual(ups(hit({ bpm: 100, lper1: lper }, almostBar).lfo), cycles - 1, `LFO PER BAR ${cycles}: not ${cycles} cycles in a bar`);
+  const from0 = hit({ lper1: 3 }, 0.5).lfo, from180 = hit({ lper1: 3, lphase1: 64 }, 0.5).lfo, from90 = hit({ lper1: 3, lphase1: 32 }, 0.01).lfo;
   for (let i = 0; i < from0.length; i += 997) assert.ok(Math.abs(from0[i] + from180[i]) < 1e-6, 'LFO PHASE at 180 degrees is not the wave upside down');
   assert.ok(from90[100] > 0.99, 'LFO PHASE at 90 degrees does not start at the top');
 }
@@ -179,6 +179,34 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.deepStrictEqual(shot({ tune2: 100, cpts: 0, cmod: 90 }).body, shot({}).body, 'the click\'s MOD LEVEL moves the body');
   const hz = (values) => { const core = makeCore(RATE); core.message({ set: { sweep1: 0, sweep2: 0, bpts: 0, ...values } }); core.message({ hit: 1 }); core.tick(); return core.hz; };
   assert.ok(Math.abs(hz({ pitch1: 12, pitch2: 36, bmod: 60 }) - 65.406) < 0.01, 'PITCH between C1 and C3 is not C2');
+}
+
+/* the texture's MOD LEVEL morphs all its knobs but LEVEL between 2 to 5 markers, and the rumble's does the same; no MOD LEVEL moves another layer */
+{
+  const shot = (values) => hit({ tpts: 0, rpts: 0, ...values }, 0.3);      /* 2 markers, when the test does not give another number */
+  const as1 = (marker, n) => Object.fromEntries(Object.entries(marker).map(([name, v]) => [name.replace(new RegExp(n + '$'), '1'), v]));      /* a marker's values, put at marker 1 */
+  const sets = {
+    texture: { g: 't', one: { tattack1: 0, tdecay1: 30, tcurve1: 0, topen1: 40, tnoise1: 20, trev1: 0, tsize1: 30, tlow1: 0, thigh1: 127 },
+      two: { tattack2: 60, tdecay2: 100, tcurve2: 80, topen2: 120, tnoise2: 100, trev2: 100, tsize2: 90, tlow2: 40, thigh2: 87 },
+      mix: { tattack1: 30, tdecay1: 65, tcurve1: 40, topen1: 80, tnoise1: 60, trev1: 50, tsize1: 60, tlow1: 20, thigh1: 107 } },
+    rumble: { g: 'r', one: { rattack1: 20, dark1: 30, grit1: 10, rphase1: 0, reverb1: 127, size1: 30, rlen1: 2, delay1: 0, ddiv1: 3, dfbk1: 20, lper1: 3, lphase1: 0, lshape1: 0, llevel1: 0, ldark1: 0 },
+      two: { rattack2: 60, dark2: 90, grit2: 110, rphase2: 64, reverb2: 67, size2: 90, rlen2: 4, delay2: 100, ddiv2: 7, dfbk2: 80, lper2: 7, lphase2: 64, lshape2: 2, llevel2: 100, ldark2: 60 },
+      mix: { rattack1: 40, dark1: 60, grit1: 60, rphase1: 32, reverb1: 97, size1: 60, rlen1: 3, delay1: 50, ddiv1: 5, dfbk1: 50, lper1: 5, lphase1: 32, lshape1: 1, llevel1: 50, ldark1: 30 } }
+  };
+  for (const layer in sets) {
+    const { g, one, two, mix } = sets[layer], three = Object.fromEntries(Object.entries(one).map(([name, v]) => [name.replace(/1$/, '3'), v])), wave = (values) => shot(values)[layer], mod = g + 'mod', pts = g + 'pts';
+    assert.notDeepStrictEqual(wave(one), wave(as1(two, 2)), `the ${layer}'s markers do not change the ${layer}`);
+    assert.deepStrictEqual(wave({ ...one, ...two, [mod]: 0 }), wave(one), `the ${layer}'s MOD LEVEL at 0 is not marker 1`);
+    assert.deepStrictEqual(wave({ ...one, ...two, [mod]: 120 }), wave(as1(two, 2)), `the ${layer}'s MOD LEVEL at its top is not the last of 2 markers`);
+    assert.deepStrictEqual(wave({ ...one, ...two, ...three, [pts]: 1, [mod]: 60 }), wave(as1(two, 2)), `the ${layer}'s MOD LEVEL at the middle is not marker 2 of 3`);
+    assert.deepStrictEqual(wave({ ...one, ...two, [mod]: 60 }), wave(mix), `the ${layer}'s MOD LEVEL between two markers does not mix their values`);
+    assert.deepStrictEqual(wave({ ...one, ...two, [pts]: -1, [mod]: 90 }), wave(one), `with one marker the ${layer} is not marker 1 at each MOD LEVEL`);
+    assert.deepStrictEqual(hit({ ...one, ...two, [mod]: 90 }, 0.3)[layer], hit(one, 0.3)[layer], `a kick with no number of ${layer} markers does not have one marker`);
+    for (const other of ['body', 'click', 'texture', 'rumble']) if (other !== layer)
+      assert.deepStrictEqual(shot({ ...one, ...two, [mod]: 90 })[other], shot(one)[other], `the ${layer}'s MOD LEVEL moves the ${other}`);
+  }
+  /* a knob with a list of values (LENGTH, DLY TIME, LFO PER BAR, LFO SHAPE) goes to the nearest value of the list between two markers */
+  assert.deepStrictEqual(shot({ rlen1: 1, rlen2: 4, rmod: 50 }).rumble, shot({ rlen1: 2 }).rumble, 'LENGTH between two markers is not the nearest length');
 }
 
 /* the sequencer: each step that is on in `pat` (step 1 is its lowest bit) hits the kick, over STEPS steps, and DIVISION is the number of steps in a bar */
