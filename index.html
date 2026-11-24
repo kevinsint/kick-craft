@@ -32,9 +32,13 @@ h1 { font-size: 1.5rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.125rem; }
 p { margin: 0; max-width: 68ch; }
 section { display: grid; gap: var(--s2); }
 :focus-visible { outline: 3px solid var(--layer); outline-offset: 2px; }
-.page :focus-visible { outline-color: var(--accent); }
+.page :focus-visible, .foot :focus-visible { outline-color: var(--accent); }
 .device :focus-visible { outline-color: var(--layer); }
 .hidden-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* the footer: the author and the way back to his site. It is at the end of the page and scrolls with it */
+.foot { max-width: 74rem; margin: var(--s4) auto 0; padding-top: var(--s2); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0 var(--s3); align-items: center; justify-content: space-between; }
+.foot a { color: var(--accent); font-weight: 600; display: inline-block; padding-block: 10px; }
 
 .instrument { gap: var(--s1); }
 .top { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: baseline; justify-content: space-between; }
@@ -133,7 +137,7 @@ section { display: grid; gap: var(--s2); }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 65</p>
+      <p class="version">Draft 66</p>
     </div>
     <div class="device">
       <div class="row">
@@ -347,6 +351,10 @@ section { display: grid; gap: var(--s2); }
   </section>
 
 </main>
+<footer class="foot">
+  <p>Made by Kevin Sint</p>
+  <a href="https://kevinsint.live/">Back to kevinsint.live</a>
+</footer>
 
 <script>
 /* SPDX-License-Identifier: GPL-3.0-only
