@@ -254,4 +254,28 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.deepStrictEqual(played({ pat: 2 ** 31, steps: 32, div: 5 }, 1.99), [31], 'step 32 does not play');
 }
 
+/* SOLO: the output is the parts that are solo, mixed as in the kick; one part alone is that part's own wave, and no solo or all four is the whole kick */
+{
+  const out = (solo) => {
+    const core = makeCore(RATE), count = Math.floor(RATE * 0.3), shot = { out: new Float32Array(count), all: new Float32Array(count), body: new Float32Array(count), click: new Float32Array(count), texture: new Float32Array(count), rumble: new Float32Array(count) };
+    core.message({ set: { tex1: 64, rumble1: 64 } }); if (solo) core.message({ solo }); core.message({ hit: 1 });
+    for (let i = 0; i < count; i++) { core.tick(); for (const name in shot) shot[name][i] = core[name]; }
+    return shot;
+  };
+  const whole = out();
+  for (const part of ['body', 'click', 'texture', 'rumble']) {
+    assert.ok(peak(whole[part]) > 0.01, `the ${part} is silent in the test of SOLO`);
+    assert.deepStrictEqual(out([part]).out, whole[part], `SOLO of the ${part} is not the ${part} alone`);
+  }
+  assert.deepStrictEqual(whole.out, whole.all, 'with no SOLO the output is not the whole kick');
+  assert.deepStrictEqual(out('all').out, whole.all, 'SOLO "all" is not the whole kick');
+  assert.deepStrictEqual(out([]).out, whole.all, 'SOLO of no part is not the whole kick');
+  assert.deepStrictEqual(out(['body', 'click', 'texture', 'rumble']).out, whole.all, 'SOLO of the four parts is not the whole kick');
+  const two = out(['click', 'rumble']).out;
+  assert.notDeepStrictEqual(two, whole.click, 'SOLO of the click and the rumble is the click alone');
+  assert.notDeepStrictEqual(two, whole.rumble, 'SOLO of the click and the rumble is the rumble alone');
+  assert.ok(two.every((v, i) => Math.abs(v - whole.click[i] - whole.rumble[i]) < 1e-6), 'SOLO of the click and the rumble is not their sum');
+  assert.notDeepStrictEqual(out(['body', 'texture']).out, whole.all, 'SOLO of the body and the texture is the whole kick');
+}
+
 console.log('engine: all tests pass');

@@ -133,7 +133,7 @@ section { display: grid; gap: var(--s2); }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 62</p>
+      <p class="version">Draft 63</p>
     </div>
     <div class="device">
       <div class="row">
@@ -407,7 +407,7 @@ function makeCore(rate) {
   var hpY = new Float64Array(9), hpX = new Float64Array(9);              /* three chains (body, click, click alone) of three low cuts */
   var cur = null, old = null, fadeStep = 1 / (0.002 * rate), smooth = 1 - Math.exp(-1 / (0.0015 * rate));
   var noiseEvery = Math.max(1, Math.round(rate / 48000)), dampKeep = Math.pow(0.35, 48000 / rate);
-  var solo = 'all', running = false, stepCount = 0, untilStep = 0;
+  var solo = null, running = false, stepCount = 0, untilStep = 0;
   var vb = 0, vt = 0, vs = 0, vh = 0, vh2 = 0, vn = 0, vg = 0;      /* one voice's sample: body, click and noise, click alone, the two pitches, the texture's noise and its gate */
   var self = { out: 0, all: 0, body: 0, click: 0, rumble: 0, texture: 0, lfo: 0, hz: 0, hz2: 0, step: -1, hits: 0 };
 
@@ -574,14 +574,18 @@ function makeCore(rate) {
     b *= d.level * d.bodyVol; c *= d.clickVol; x *= d.texVol; r *= d.rumbleVol;      /* each layer's VOLUME: after all that the layer feeds */
     self.body = Math.tanh(b * 0.7); self.click = Math.tanh(cs * d.clickVol * 0.7); self.rumble = r; self.texture = Math.tanh(x * 0.7);
     self.all = Math.tanh((b + c + x) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
-    self.out = solo === 'body' ? self.body : solo === 'click' ? self.click : solo === 'rumble' ? r : solo === 'texture' ? self.texture : self.all;
+    /* SOLO: the parts that are solo, mixed as in the kick. The click with no body is the click's own wave: in FM and RING it is inside the body */
+    self.out = !solo ? self.all : Math.tanh(((solo.body ? b : 0) + (solo.click ? (solo.body ? c : cs * d.clickVol) : 0) + (solo.texture ? x : 0)) * 0.7) + (solo.rumble ? r : 0);
   }
   function message(m) {
     if (m.set) set(m.set);
     if (m.hit) hit();
     if (m.run !== undefined) { running = !!m.run; stepCount = 0; untilStep = 0; lfoPhase = 0; ctl = 0;      /* the rumble's LFO starts with the first step */
       if (!running) self.step = -1; }
-    if (m.solo !== undefined) solo = m.solo;
+    if (m.solo !== undefined) {      /* 'all', or the list of the parts that are solo; an empty list is all the parts */
+      solo = null;
+      if (m.solo !== 'all' && m.solo.length) { solo = {}; m.solo.forEach(function (part) { solo[part] = true; }); }
+    }
   }
   set({});
   self.tick = tick; self.message = message;
@@ -683,9 +687,9 @@ function makeKickEngine(outRate) {
     { id: 'trigs', name: 'TRIGS', where: 'STEPS set', min: 1, max: 32, value: 4, text: plain },
     { id: 'shift', name: 'SHIFT', where: 'STEPS set', min: 0, max: 31, value: 0, text: plain }
   ];
-  var value = {}, controls = {}, tab = 'click', soloPart = 'all';      /* `soloPart`: the one part that is heard alone, or 'all' */
+  var value = {}, controls = {}, tab = 'click', soloParts = [];      /* `soloParts`: the parts that are heard alone; none is all the parts */
   function copy() { var o = {}; for (var k in value) o[k] = value[k]; return o; }
-  function soloLayer() { return soloPart; }
+  function soloLayer() { return soloParts.length ? soloParts : 'all'; }
 
   /* ---- the sound: the engine in the browser's audio thread; in the page's own thread when the browser refuses that ---- */
   var audio = null, post = null, pending = [], readout = document.getElementById('readout'), engineLine = document.getElementById('engine');
@@ -1158,10 +1162,10 @@ function makeKickEngine(outRate) {
   var presetsBox = document.getElementById('presets'), presetsOpen = document.getElementById('presets-open');      /* the presets: a dialog below its button, as the sequencer */
   presetsOpen.addEventListener('click', function () { presetsBox.style.top = Math.round(presetsOpen.getBoundingClientRect().bottom + window.scrollY + 8) + 'px'; presetsBox.showModal(); });
   document.getElementById('presets-close').addEventListener('click', function () { presetsBox.close(); });
-  PARTS.forEach(function (t) {      /* SOLO: one part at a time; a second press of the same button gives all the parts back */
+  PARTS.forEach(function (t) {      /* SOLO: each part on or off, and more than one at a time; with none, all the parts play */
     document.getElementById('solo-' + t).addEventListener('click', function () {
-      soloPart = soloPart === t ? 'all' : t;
-      PARTS.forEach(function (other) { document.getElementById('solo-' + other).setAttribute('aria-pressed', String(other === soloPart)); });
+      soloParts = soloParts.indexOf(t) < 0 ? soloParts.concat(t) : soloParts.filter(function (other) { return other !== t; });
+      this.setAttribute('aria-pressed', String(soloParts.indexOf(t) >= 0));
       send({ solo: soloLayer() });
     });
   });
