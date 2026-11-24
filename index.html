@@ -10,7 +10,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Kevin Sint */
 [hidden] { display: none !important; }
-/* Layout: one column, one left edge. The instrument first and in one screen: the wave, the tabs, the knobs of one tab. The text on how it is built comes after. */
+/* Layout: one column, one left edge. The instrument first and in one screen: the wave, the knobs of one part. */
 :root {
   --bg: #eef0f2; --fg: #15191d; --muted: #4d5862; --line: #c3cad1; --surface: #ffffff; --accent: #8a5200;
   --dev: #1b1d20; --dev-edge: #737b84; --dev-text: #dfe3e7; --dev-muted: #a9b1b9; --lit: #ffa400; --layer: #5adee6;
@@ -30,10 +30,7 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.55 var(-
 h1, h2, h3 { font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
 h1 { font-size: 1.5rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.125rem; }
 p { margin: 0; max-width: 68ch; }
-.lede { color: var(--muted); font-size: 1.125rem; }
 section { display: grid; gap: var(--s2); }
-.mono { font-family: var(--mono); }
-ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-width: 68ch; }
 :focus-visible { outline: 3px solid var(--layer); outline-offset: 2px; }
 .page :focus-visible { outline-color: var(--accent); }
 .device :focus-visible { outline-color: var(--layer); }
@@ -72,10 +69,11 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .scope { position: relative; height: clamp(10rem, 24vh, 24rem); border: 2px solid var(--dev-edge); border-radius: 4px; background: #000; }
 .scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .scope #cursor { pointer-events: none; }
-.readout { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--dev-muted); min-height: 1.55rem; max-width: none; flex: 1 1 20rem; }
-/* below the picture, at its right: two rows of rotary knobs, a column for each layer. MOD LEVEL is the same value as the slider in the layer's tab; VOLUME is the layer's last gain. Drag a knob up or down */
+.readout { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--dev-muted); min-height: 1.55rem; max-width: none; }
+/* below the picture: the MOD LEVEL slider of the open part, and at its right two rows of rotary knobs, a column for each layer. MOD LEVEL is the same value as the slider of the layer's part; VOLUME is the layer's last gain. Drag a knob up or down. A third row: a push button that selects the part */
 .under { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: flex-start; }
-.dials { display: grid; grid-template-columns: auto repeat(4, minmax(4.5rem, auto)); gap: 4px var(--s1); justify-items: center; align-items: center; margin-left: auto; font: 600 1rem var(--mono); }
+.slide { flex: 1 1 20rem; min-width: 0; }
+.dials { display: grid; grid-template-columns: auto repeat(4, minmax(4.5rem, auto)); gap: var(--s1); justify-items: center; align-items: center; margin-left: auto; font: 600 1rem var(--mono); }
 .dials .of { justify-self: end; }
 @media (max-width: 30rem) {
   .dials { grid-template-columns: repeat(4, 1fr); width: 100%; margin-left: 0; }
@@ -87,11 +85,10 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .dial[aria-disabled="true"] { border-style: dashed; border-color: var(--dev-edge); cursor: default; }
 .dial[aria-disabled="true"]::after { display: none; }
 
-.tabs { display: flex; flex-wrap: wrap; gap: var(--s1); border-bottom: 2px solid var(--dev-edge); }
-.tab { font: 600 1rem var(--mono); min-height: 44px; padding: 0 var(--s3); border: 2px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0;
-  background: transparent; color: var(--dev-muted); cursor: pointer; }
-.tab[aria-selected="true"] { color: #15191d; background: var(--layer); }
-.tab[aria-selected="true"]::before { content: "\25CF\00A0" / ""; }
+/* a push button under each column of knobs: it shows the knobs of that part below */
+.part { box-sizing: border-box; width: 36px; height: 36px; padding: 0; border-radius: 4px; border: 2px solid var(--c); background: #000; color: #15191d; font: 600 1rem var(--mono); cursor: pointer; }
+.part[aria-pressed="true"] { background: var(--c); }
+.part[aria-pressed="true"]::before { content: "\25CF"; content: "\25CF" / ""; }      /* the first one for a browser that does not know the second */
 .knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--s1) var(--s2); }
 .knob { display: grid; gap: 0; font-family: var(--mono); min-width: 0; align-content: start; }
 .knob .head { display: flex; flex-wrap: wrap; gap: 0 var(--s1); }
@@ -114,7 +111,7 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .mark[aria-pressed="true"]::after { background: var(--lit); }
 .drawer { display: grid; gap: var(--s1); border: 2px solid var(--dev-edge); border-top-width: 6px; border-radius: 0 0 6px 6px; padding: var(--s1) var(--s2) var(--s2); }
 .knob input[type="range"]:disabled { accent-color: var(--dev-edge); }
-/* the sequencer: a dialog that opens below the SEQ button and grows with its content, so the page is the one scroll */
+/* the sequencer and the presets: each is a dialog that opens below its button and grows with its content, so the page is the one scroll */
 .seq { position: absolute; bottom: auto; margin: 0 auto; width: min(60rem, calc(100% - 32px)); max-width: none; max-height: none; overflow: visible; box-sizing: border-box;
   background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 12px; padding: var(--s2); }
 .seq::backdrop { background: rgb(0 0 0 / 0.6); }
@@ -126,24 +123,6 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .step[aria-pressed="true"]::before { content: "\25CF\00A0" / ""; }
 .step.now { outline: 4px solid var(--lit); outline-offset: 1px; }
 
-.path { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: stretch; margin: 0; padding: 0; list-style: none; }
-.path li { flex: 1 1 12rem; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: var(--s1) var(--s2); display: grid; gap: 2px; align-content: start; }
-.path .step { font-weight: 600; }
-.path .ctl { font-family: var(--mono); color: var(--accent); font-weight: 600; }
-
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; vertical-align: top; padding: var(--s1) var(--s2) var(--s1) 0; border-bottom: 1px solid var(--line); }
-th { font-weight: 600; color: var(--muted); }
-td:first-child { font-family: var(--mono); font-weight: 600; }
-@media (max-width: 720px) {
-  table, tbody, tr, td { display: block; }
-  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  tr { border: 1px solid var(--line); border-radius: 6px; padding: var(--s1) var(--s2); margin-bottom: var(--s1); background: var(--surface); }
-  td { border: 0; padding: 4px 0; }
-  td:not(:first-child)::before { content: attr(data-label) ": "; font-weight: 600; color: var(--muted); }
-}
-.choice { border-left: 4px solid var(--accent); padding-left: var(--s2); display: grid; gap: 4px; max-width: 68ch; }
-.choice strong { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -151,17 +130,18 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 56</p>
+      <p class="version">Draft 61</p>
     </div>
     <div class="device">
       <div class="row">
         <button class="btn main" id="hit" type="button" aria-keyshortcuts="K">Hit</button>
         <button class="btn run" type="button">Play</button>
         <button class="btn" id="seq-open" type="button" aria-haspopup="dialog">SEQ…</button>
-        <button class="btn" id="solo" type="button" aria-pressed="false">Solo Tab</button>
+        <button class="btn" id="presets-open" type="button" aria-haspopup="dialog">Presets…</button>
+        <button class="btn" id="solo" type="button" aria-pressed="false">Solo Part</button>
         <label class="pick" for="span">Show <select id="span"><option value="0.125">1/8 bar</option><option value="0.25">1/4 bar</option><option value="0.5">1/2 bar</option><option value="1" selected>1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option></select></label>
         <div class="sees" role="group" aria-label="Waves in the picture">
-          <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Tab</button>
+          <button class="btn see" id="see-follow" type="button" aria-pressed="true">Follow Part</button>
           <button class="btn see" id="see-all" type="button" aria-pressed="true" style="--c:#b4bcc4"><span class="line"></span>ALL</button>
           <button class="btn see" id="see-click" type="button" aria-pressed="false" style="--c:#ff8ad8"><span class="line"></span>CLICK</button>
           <button class="btn see" id="see-body" type="button" aria-pressed="true" style="--c:#5adee6"><span class="line"></span>BODY</button>
@@ -177,10 +157,46 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           <canvas id="scope" role="img" tabindex="0" aria-label="One hit of the kick from silence. The buttons above choose the waves: all the layers in grey, the body in blue, the texture as a violet dotted line, the click in pink, the rumble in green, the rumble’s LFO as a yellow-green line of long and short dashes with a line down the picture where each of its cycles starts, the pitch as an amber dashed line. A line moves over the picture while a hit plays, when Playhead is on. The Left and Right arrow keys move the point that is read." aria-describedby="status"></canvas>
           <canvas id="cursor" aria-hidden="true"></canvas>
         </div>
+        <p class="readout"><span id="readout"></span> <span id="engine" role="status"></span> <span id="page-status" role="status"></span></p>
         <div class="under">
-          <p class="readout"><span id="readout"></span> <span id="engine" role="status"></span></p>
+          <div class="morph slide" id="slide-click" role="group" aria-labelledby="c-name" hidden>
+            <div class="row">
+              <label class="name" id="c-name" for="in-cmod">CLICK MOD LEVEL</label> <output id="c-shown" for="in-cmod"></output>
+            </div>
+            <div class="track">
+              <div class="marks" id="c-marks"></div>
+              <input id="in-cmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="c-where">
+            </div>
+          </div>
+          <div class="morph slide" id="slide-body" role="group" aria-labelledby="b-name" hidden>
+            <div class="row">
+              <label class="name" id="b-name" for="in-bmod">BODY MOD LEVEL</label> <output id="b-shown" for="in-bmod"></output>
+            </div>
+            <div class="track">
+              <div class="marks" id="b-marks"></div>
+              <input id="in-bmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="b-where">
+            </div>
+          </div>
+          <div class="morph slide" id="slide-texture" role="group" aria-labelledby="t-name" hidden>
+            <div class="row">
+              <label class="name" id="t-name" for="in-tmod">TEXTURE MOD LEVEL</label> <output id="t-shown" for="in-tmod"></output>
+            </div>
+            <div class="track">
+              <div class="marks" id="t-marks"></div>
+              <input id="in-tmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="t-where">
+            </div>
+          </div>
+          <div class="morph slide" id="slide-rumble" role="group" aria-labelledby="r-name" hidden>
+            <div class="row">
+              <label class="name" id="r-name" for="in-rmod">RUMBLE MOD LEVEL</label> <output id="r-shown" for="in-rmod"></output>
+            </div>
+            <div class="track">
+              <div class="marks" id="r-marks"></div>
+              <input id="in-rmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="r-where">
+            </div>
+          </div>
           <div class="dials">
-            <span class="hidden-text" id="dials-hint">The same value as the MOD LEVEL slider in the layer’s tab. Off while the layer has one marker: add a marker in its tab.</span>
+            <span class="hidden-text" id="dials-hint">The same value as the MOD LEVEL slider of the layer. Off while the layer has one marker: select the layer and add a marker.</span>
             <span class="corner"></span><span aria-hidden="true">CLICK</span><span aria-hidden="true">BODY</span><span aria-hidden="true">TEXTURE</span><span aria-hidden="true">RUMBLE</span>
             <span class="of" aria-hidden="true">MOD LEVEL</span>
             <span class="dial" id="dial-c" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="CLICK MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#ff8ad8"></span>
@@ -192,34 +208,23 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             <span class="dial" id="dial-bvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="BODY VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#5adee6"></span>
             <span class="dial" id="dial-tvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="TEXTURE VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#b79cff"></span>
             <span class="dial" id="dial-rvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="RUMBLE VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#8be36b"></span>
+            <span class="of" aria-hidden="true">SELECT</span>
+            <button class="part" id="part-click" type="button" aria-pressed="false" aria-controls="panel-click" aria-label="Select CLICK" style="--c:#ff8ad8"></button>
+            <button class="part" id="part-body" type="button" aria-pressed="false" aria-controls="panel-body" aria-label="Select BODY" style="--c:#5adee6"></button>
+            <button class="part" id="part-texture" type="button" aria-pressed="false" aria-controls="panel-texture" aria-label="Select TEXTURE" style="--c:#b79cff"></button>
+            <button class="part" id="part-rumble" type="button" aria-pressed="false" aria-controls="panel-rumble" aria-label="Select RUMBLE" style="--c:#8be36b"></button>
           </div>
         </div>
         <p class="hidden-text" id="status"></p>
       </div>
-      <div class="tabs" role="tablist" aria-label="The kick’s layers">
-        <button class="tab" role="tab" type="button" id="tab-click" aria-controls="panel-click" aria-selected="false" tabindex="-1">CLICK</button>
-        <button class="tab" role="tab" type="button" id="tab-body" aria-controls="panel-body" aria-selected="true">BODY</button>
-        <button class="tab" role="tab" type="button" id="tab-texture" aria-controls="panel-texture" aria-selected="false" tabindex="-1">TEXTURE</button>
-        <button class="tab" role="tab" type="button" id="tab-rumble" aria-controls="panel-rumble" aria-selected="false" tabindex="-1">RUMBLE</button>
-        <button class="tab" role="tab" type="button" id="tab-presets" aria-controls="panel-presets" aria-selected="false" tabindex="-1">PRESETS</button>
-      </div>
-      <div role="tabpanel" id="panel-click" aria-labelledby="tab-click" hidden>
+      <div role="group" id="panel-click" aria-label="CLICK" hidden>
         <div class="stack">
-          <div class="morph" role="group" aria-labelledby="c-name">
-            <div class="row">
-              <label class="name" id="c-name" for="in-cmod">MOD LEVEL</label> <output id="c-shown" for="in-cmod"></output>
-            </div>
-            <div class="track">
-              <div class="marks" id="c-marks"></div>
-              <input id="in-cmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="c-where">
-            </div>
+          <div class="morph">
             <div class="drawer">
               <p class="hint" id="c-where"></p>
               <p class="hidden-text" id="c-moved" role="status"></p>
               <div class="knobs" id="c-knobs"></div>
               <div class="row">
-                <button class="btn" id="c-left" type="button">Move Left</button>
-                <button class="btn" id="c-right" type="button">Move Right</button>
                 <button class="btn danger" id="c-remove" type="button">Remove Marker…</button>
                 <span class="row" id="c-confirm" hidden>
                   <button class="btn danger" id="c-yes" type="button">Remove Marker</button>
@@ -230,23 +235,14 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           </div>
         </div>
       </div>
-      <div role="tabpanel" id="panel-body" aria-labelledby="tab-body">
+      <div role="group" id="panel-body" aria-label="BODY" hidden>
         <div class="stack">
-          <div class="morph" role="group" aria-labelledby="b-name">
-            <div class="row">
-              <label class="name" id="b-name" for="in-bmod">MOD LEVEL</label> <output id="b-shown" for="in-bmod"></output>
-            </div>
-            <div class="track">
-              <div class="marks" id="b-marks"></div>
-              <input id="in-bmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="b-where">
-            </div>
+          <div class="morph">
             <div class="drawer">
               <p class="hint" id="b-where"></p>
               <p class="hidden-text" id="b-moved" role="status"></p>
               <div class="knobs" id="b-knobs"></div>
               <div class="row">
-                <button class="btn" id="b-left" type="button">Move Left</button>
-                <button class="btn" id="b-right" type="button">Move Right</button>
                 <button class="btn danger" id="b-remove" type="button">Remove Marker…</button>
                 <span class="row" id="b-confirm" hidden>
                   <button class="btn danger" id="b-yes" type="button">Remove Marker</button>
@@ -257,23 +253,14 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           </div>
         </div>
       </div>
-      <div role="tabpanel" id="panel-texture" aria-labelledby="tab-texture" hidden>
+      <div role="group" id="panel-texture" aria-label="TEXTURE" hidden>
         <div class="stack">
-          <div class="morph" role="group" aria-labelledby="t-name">
-            <div class="row">
-              <label class="name" id="t-name" for="in-tmod">MOD LEVEL</label> <output id="t-shown" for="in-tmod"></output>
-            </div>
-            <div class="track">
-              <div class="marks" id="t-marks"></div>
-              <input id="in-tmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="t-where">
-            </div>
+          <div class="morph">
             <div class="drawer">
               <p class="hint" id="t-where"></p>
               <p class="hidden-text" id="t-moved" role="status"></p>
               <div class="knobs" id="t-knobs"></div>
               <div class="row">
-                <button class="btn" id="t-left" type="button">Move Left</button>
-                <button class="btn" id="t-right" type="button">Move Right</button>
                 <button class="btn danger" id="t-remove" type="button">Remove Marker…</button>
                 <span class="row" id="t-confirm" hidden>
                   <button class="btn danger" id="t-yes" type="button">Remove Marker</button>
@@ -284,23 +271,14 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           </div>
         </div>
       </div>
-      <div role="tabpanel" id="panel-rumble" aria-labelledby="tab-rumble" hidden>
+      <div role="group" id="panel-rumble" aria-label="RUMBLE" hidden>
         <div class="stack">
-          <div class="morph" role="group" aria-labelledby="r-name">
-            <div class="row">
-              <label class="name" id="r-name" for="in-rmod">MOD LEVEL</label> <output id="r-shown" for="in-rmod"></output>
-            </div>
-            <div class="track">
-              <div class="marks" id="r-marks"></div>
-              <input id="in-rmod" type="range" min="0" max="120" step="1" value="0" aria-describedby="r-where">
-            </div>
+          <div class="morph">
             <div class="drawer">
               <p class="hint" id="r-where"></p>
               <p class="hidden-text" id="r-moved" role="status"></p>
               <div class="knobs" id="r-knobs"></div>
               <div class="row">
-                <button class="btn" id="r-left" type="button">Move Left</button>
-                <button class="btn" id="r-right" type="button">Move Right</button>
                 <button class="btn danger" id="r-remove" type="button">Remove Marker…</button>
                 <span class="row" id="r-confirm" hidden>
                   <button class="btn danger" id="r-yes" type="button">Remove Marker</button>
@@ -311,34 +289,33 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
           </div>
         </div>
       </div>
-      <div role="tabpanel" id="panel-presets" aria-labelledby="tab-presets" hidden>
+      <dialog class="seq" id="presets" aria-labelledby="presets-title">
         <div class="stack">
+          <h2 id="presets-title">Presets</h2>
           <div class="presets">
-            <div class="field"><label for="preset-list">Saved Presets</label><select id="preset-list"></select></div>
-            <button class="btn" id="preset-load" type="button">Load</button>
-            <button class="btn danger" id="preset-delete" type="button">Delete…</button>
-            <span class="row" id="preset-confirm" hidden>
-              <button class="btn danger" id="preset-yes" type="button">Delete Preset</button>
-              <button class="btn" id="preset-no" type="button">Cancel</button>
-            </span>
+              <div class="field"><label for="preset-list">Saved Presets</label><select id="preset-list"></select></div>
+              <button class="btn" id="preset-load" type="button">Load</button>
+              <button class="btn danger" id="preset-delete" type="button">Delete…</button>
+              <span class="row" id="preset-confirm" hidden>
+                <button class="btn danger" id="preset-yes" type="button">Delete Preset</button>
+                <button class="btn" id="preset-no" type="button">Cancel</button>
+              </span>
+              <button class="btn" id="preset-update" type="button">Update Original</button>
+              <button class="btn danger" id="preset-revert" type="button">Revert to Original…</button>
+              <span class="row" id="revert-confirm" hidden>
+                <button class="btn danger" id="revert-yes" type="button">Revert to Original</button>
+                <button class="btn" id="revert-no" type="button">Cancel</button>
+              </span>
+              <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
+              <button class="btn main" id="preset-save" type="button">Create New Preset</button>
           </div>
           <p class="hint" id="open-text"></p>
-          <div class="presets">
-            <button class="btn" id="preset-update" type="button">Update Original</button>
-            <button class="btn danger" id="preset-revert" type="button">Revert to Original…</button>
-            <span class="row" id="revert-confirm" hidden>
-              <button class="btn danger" id="revert-yes" type="button">Revert to Original</button>
-              <button class="btn" id="revert-no" type="button">Cancel</button>
-            </span>
-          </div>
-          <div class="presets">
-            <div class="field"><label for="preset-name">Name</label><input id="preset-name" type="text" maxlength="40" autocomplete="off"></div>
-            <button class="btn main" id="preset-save" type="button">Create New Preset</button>
-          </div>
           <p class="hint" id="preset-status" role="status"></p>
-          <p class="hint">Each change is saved as you make it, in a copy of the open preset. Load opens a copy: the saved preset changes only with Update Original. A preset keeps every knob of BODY, TEXTURE, CLICK and RUMBLE, and the sequencer.</p>
+          <div class="row">
+            <button class="btn" id="presets-close" type="button">Close</button>
+          </div>
         </div>
-      </div>
+      </dialog>
       <dialog class="seq" id="seq" aria-labelledby="seq-title">
         <div class="stack">
           <h2 id="seq-title">Sequencer</h2>
@@ -354,135 +331,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     </div>
   </section>
 
-  <section aria-labelledby="h-what">
-    <h2 id="h-what">What it is</h2>
-    <p class="lede">A kick drum on OP6. It has three layers, and each one has its own attack. The body and the click are two oscillators of the same kind, with the controls of the Shakmat Battering Ram: a pitch, a sweep of the pitch, a decay. The click is the short one. The body has a second output, the texture: the body with noise, through a low-pass gate and a reverb. The rumble comes up after each hit, as on the Ohmforce Bohm. Any LFO of the bank plays it.</p>
-    <p>This page plays the same algorithm in your browser, sample by sample. “Show” sets the length of the picture: 1/8 of a bar to 4 bars at the TEMPO. The lines of the picture are parts of a bar. Play hits the kick on the steps of the sequencer, and Stop ends it. SEQ opens the sequencer. The <span class="mono">K</span> key hits the kick while a control of the instrument has the focus. It stays as a web app when the kick is in the FM-1.</p>
-  </section>
-
-  <section aria-labelledby="h-ram">
-    <h2 id="h-ram">What the Battering Ram does</h2>
-    <p>From its manual (Shakmat, 8 pages). The manual names the controls and their effect; it does not give the circuit, the wave or the curves.</p>
-    <table>
-      <thead><tr><th>Control</th><th>In the manual</th><th>In this kick</th></tr></thead>
-      <tbody>
-        <tr><td>Pitch</td><td data-label="In the manual">C1 to C3, C2 in the middle. C0 to C5 as an option. A V/oct input.</td><td data-label="In this kick">The same: C1 to C3 by notes, C0 to C5 with OCT+ held.</td></tr>
-        <tr><td>Decay</td><td data-label="In the manual">The length of the decay.</td><td data-label="In this kick">The level falls to nothing in 50 ms to 3 s.</td></tr>
-        <tr><td>Click</td><td data-label="In the manual">The amount of envelope applied to the pitch: a clicky transient.</td><td data-label="In this kick">Named SWEEP here: how far the pitch starts above the note, 0 to 5 octaves. The body has one and the click has one.</td></tr>
-        <tr><td>Depth</td><td data-label="In the manual">The decay of the pitch envelope. At its minimum, very clicky; higher, as a 909 kick.</td><td data-label="In this kick">The time the pitch takes to fall to the note: 4 ms to 180 ms.</td></tr>
-        <tr><td>Drive</td><td data-label="In the manual">Two types: a two-stage wavefolder (harmonics and compression), or close to clipping.</td><td data-label="In this kick">FOLD: two stages, a soft top that compresses, then a fold. CLIP: a flat top. A third type, CRUSH, is from the Bohm.</td></tr>
-        <tr><td>Level, velocity</td><td data-label="In the manual">A level, and a velocity input read at the trigger.</td><td data-label="In this kick">A LEVEL for each layer: the body, the click, the rumble. No velocity in the first version.</td></tr>
-        <tr><td>Trigger, gate</td><td data-label="In the manual">Plays on a rising edge. Gate mode adds a hold stage to the envelopes.</td><td data-label="In this kick">Plays when the LFO goes up through 1 V. No gate mode in the first version.</td></tr>
-        <tr><td>HPF</td><td data-label="In the manual">A 3rd-order low cut at 30 Hz.</td><td data-label="In this kick">The same, on or off.</td></tr>
-        <tr><td>Envelope out</td><td data-label="In the manual">The amplitude envelope, or its inverse, for ducking.</td><td data-label="In this kick">Not on this page.</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section aria-labelledby="h-bohm">
-    <h2 id="h-bohm">What the Bohm adds</h2>
-    <p>From the Ohmforce Bohm’s manual and a review. The Bohm is a digital kick with nine models; its manual names the controls and not the algorithms. I took its ideas, not its sound.</p>
-    <table>
-      <thead><tr><th>In the Bohm</th><th>What it does there</th><th>In this kick</th></tr></thead>
-      <tbody>
-        <tr><td>Two sources</td><td data-label="What it does there">An oscillator for the kick and a transient synthesizer, mixed.</td><td data-label="In this kick">Two oscillators of the same kind: one for the body, one for the click. The click has its own note, its own sweep, its own attack and a short decay.</td></tr>
-        <tr><td>ATTACK on FM-2X</td><td data-label="What it does there">On the two-operator model: the amount of FM.</td><td data-label="In this kick">The click’s mode. MIX: beside the body. FM: it bends the body at the hit. RING: it multiplies it.</td></tr>
-        <tr><td>TRS DECAY, TRS TONE</td><td data-label="What it does there">The transient’s length and its filter, dark to bright.</td><td data-label="In this kick">SNAP: the click’s decay. NOISE and TONE: a burst of noise with it, dark to bright.</td></tr>
-        <tr><td>Groove</td><td data-label="What it does there">A second voice under the kick: repeats of the kick, a reverb, a noise and a gritty sub, with its own length, pitch and effects.</td><td data-label="In this kick">RUMBLE: the kick goes into a small dark reverb, then a low-pass and a drive. Each hit pushes it down, and it comes back up in its own ATTACK time.</td></tr>
-        <tr><td>ATTACK, SUSTAIN, LENGTH</td><td data-label="What it does there">The level’s envelope.</td><td data-label="In this kick">One ATTACK for each layer. The body: 1 ms to 400 ms, with a curve of its own. The click: 0 to 51 ms. The rumble: 5 ms to 1 s. No sustain: that is the gate mode, not in the first version.</td></tr>
-        <tr><td>CURVE</td><td data-label="What it does there">The shape of the pitch’s fall, from an 808’s to a 909’s.</td><td data-label="In this kick">PITCH CURVE, one for the body and one for the click: from a slow round fall to a fast snap.</td></tr>
-        <tr><td>FX</td><td data-label="What it does there">Tube, soft and hard clip, wavefold, bitcrush, decimate.</td><td data-label="In this kick">DRIVE with three types: FOLD, CLIP and CRUSH.</td></tr>
-        <tr><td>DUCK</td><td data-label="What it does there">The kick lowers the sound that comes in.</td><td data-label="In this kick">Not on this page.</td></tr>
-        <tr><td>Taps, stereo</td><td data-label="What it does there">Repeats of the kick on the clock, each with its level; stereo effects.</td><td data-label="In this kick">Not taken. A RATCHET shape on the LFO gives the repeats.</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section aria-labelledby="h-build">
-    <h2 id="h-build">How I would build it</h2>
-    <p>One hit, from the trigger to the output. The amber name is the control for that step.</p>
-    <ol class="path">
-      <li><span class="step">1. Trigger</span><span class="ctl">ALGORITHM: the LFO</span><span>The chosen LFO goes up through 1 V. The two oscillators start again at the same place, so each hit is the same. The hit before fades in 2 ms. The rumble does not start again: its tail goes on under the next hit.</span></li>
-      <li><span class="step">2. Pitch envelope</span><span class="ctl">SWEEP, DEPTH, PITCH CURVE</span><span>The body’s pitch starts SWEEP octaves above the note and falls to it in the DEPTH time, with the shape of its PITCH CURVE. PITCH, DEPTH, SWEEP and PITCH CURVE have a value at each of 1 to 5 markers, and the body’s MOD LEVEL moves the body from the first marker to the last, as the click’s does.</span></li>
-      <li><span class="step">3. Click oscillator</span><span class="ctl">LEVEL, TUNE, SWEEP, ATTACK, SNAP, MODE</span><span>The same as the body, but short: a sine at TUNE, 40 Hz to 100 Hz, whose pitch starts SWEEP octaves above and falls with a PITCH CURVE of its own. Its level comes up in its ATTACK, 0 to 51 ms, then falls in SNAP, 5 ms to 50 ms. TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each of 1 to 5 markers, and MOD LEVEL moves the click from the first marker to the last: between two markers the values are mixed.</span></li>
-      <li><span class="step">4. Body oscillator</span><span class="ctl">SELECT: the note, PHASE</span><span>A sine at the note plus the pitch envelope. PHASE is where in its cycle it starts, 0 to 357 degrees: at 0 it starts soft, at 90 with a hard edge, at 180 it goes down first. In FM mode the click bends it; in RING mode the click multiplies it.</span></li>
-      <li><span class="step">5. Noise</span><span class="ctl">NOISE, TONE</span><span>A burst of 15 ms at the hit, through a low-pass filter. It is part of the click, but the click’s ATTACK does not move it.</span></li>
-      <li><span class="step">6. Body level</span><span class="ctl">ATTACK, ATK CURVE, DECAY</span><span>The DECAY starts at the hit and does not move. The ATTACK only cuts the start of the body, for 1 ms to 400 ms, so the click has the room; after that time the wave is the same as with no attack. ATK CURVE is the shape of the cut: the body stays low and comes up at the end (127), a straight line (42), or up at once (0).</span></li>
-      <li><span class="step">7. Drive</span><span class="ctl">DRIVE, FOLD, CLIP or CRUSH</span><span>After the envelope: the tail gets cleaner as it falls. In MIX mode the click and the noise go round it, so a loud body does not flatten them. In FM and RING the click is inside the body and takes the drive.</span></li>
-      <li><span class="step">8. Low cut</span><span class="ctl">HPF</span><span>30 Hz, 3rd order.</span></li>
-      <li><span class="step">9. Texture</span><span class="ctl">LEVEL, ATTACK, DECAY, DCY CURVE, OPEN, NOISE, REVERB, SIZE, LOW CUT, HIGH CUT</span><span>The body’s second output. The body after its drive and its low cut, before its LEVEL, gets NOISE and goes into a low-pass gate: one envelope that is a low-pass filter and a level at the same time, as a vactrol gate. At the hit the gate opens to OPEN, 100 Hz to 12.8 kHz, after its ATTACK, 0 to 200 ms. Then it closes in DECAY, 20 ms to 2 s: the highs go first, then the level. DCY CURVE is the shape of the way down: fast at the start, then slowly (0), a straight line (42), or open for most of the time and down at the end (127). At each curve the gate is closed at the end of DECAY. REVERB adds a tail to what comes out of the gate, and SIZE is the time the tail takes to fall to nothing, 100 ms to 3.2 s. Two filters end the texture, after the reverb: LOW CUT takes out what is below it, 20 Hz to 2 kHz, and HIGH CUT takes out what is above it, 200 Hz to 16 kHz. Each is off at the end of its knob. The body itself, the raw output, does not change.</span></li>
-      <li><span class="step">10. Four levels, then the mix</span><span class="ctl">LEVEL of each layer</span><span>The body, the texture, the click and the rumble each have a LEVEL. No level moves another layer: with the body at 0 you hear the texture, the click and the rumble alone. Then the sum, in the centre, before the compressor.</span></li>
-      <li><span class="step">11. Rumble</span><span class="ctl">LEVEL, ATTACK, DELAY, REVERB, SIZE, LENGTH, DARK, GRIT, PHASE, LFO</span><span>The kick after its drive, before the body’s LEVEL, goes into four short echoes that feed themselves (a small reverb), then a low-pass at DARK and a drive of its own. Each hit pushes it down, and it comes up again in its ATTACK time, 5 ms to 1 s. PHASE makes it later by up to one cycle of the body’s note, so its lows add to the body or take from it. SIZE is the time the echoes take to fall to nothing, 150 ms to 2.4 s. It is not on the clock, so the tempo does not change the rumble’s tone. LENGTH is where the rumble closes after a hit, as a part of a bar at the tempo: 1/16, 1/8, 1/4, 1/2, 1 bar, 2 bars or 4 bars. It closes a gate and nothing else, so the rumble stops on the clock. A new hit starts the count again. DELAY puts repeats of the kick before the echoes: DLY TIME, a part of a bar at the tempo from 1/64 to 1/2, with triplets (T) and dotted values (D), and DLY BACK, how long they go on. REVERB at 0 takes the echoes out, so the low-pass has the kick and its repeats only. An LFO moves the rumble’s LEVEL (down to silence) and its DARK (up to 2 octaves each way); LFO PER BAR is the number of its cycles in one bar at the tempo, from 1/4 (one cycle in 4 bars) to 32, with 3, 5, 6 and 7. LFO PHASE is where in its cycle it starts, 0 to 357 degrees. The LFO wave button shows its wave in the picture, with a line where each cycle starts.</span></li>
-    </ol>
-    <h3>The trigger: 1 V, going up</h3>
-    <ul class="plain">
-      <li>An LFO’s full height is 5 V, as on the module your LFO text comes from. So 1 V is 20 % of the height, after the LFO’s LEVEL and OFFSET.</li>
-      <li>The kick plays when the LFO goes from below 20 % to 20 % or above. It can play again only after the LFO was below 20 %.</li>
-      <li>An LFO with RANGE at BOTH goes below zero: only its way up through +20 % plays the kick.</li>
-      <li>The bank moves 172 times a second, which is 5.8 ms between two moves. That is too coarse for a kick. So the engine finds where in those 5.8 ms the LFO started its step or crossed the level, and starts the kick on that sample.</li>
-      <li>All that an LFO has makes the rhythm: the ratio to the clock, the Euclidean pattern, PROB, the loop, the naps. A RATCHET gives rolls. An amount from another LFO on TRIGS changes the pattern as it plays.</li>
-    </ul>
-  </section>
-
-  <section aria-labelledby="h-panel">
-    <h2 id="h-panel">The controls on the FM-1</h2>
-    <p>OP6 becomes the kick’s key. A short press turns the kick on or off. Hold it 1 second to select it: the page is then the kick’s page, as for OP1 to OP3.</p>
-    <p>On this page K1 to K4 are KNOB1 to KNOB4, and ALGO is ALGORITHM.</p>
-    <p>The kick has three sets of knobs, as the LFO page has: the white keys 13, 14 and 15 choose BODY, CLICK or RUMBLE. The white keys 1 to 12 hit the kick by hand. The TEXTURE has no key and no knobs on the FM-1 yet: its controls on this page show NOT ON FM-1 YET where the others show their knob.</p>
-    <table>
-      <thead><tr><th>Control</th><th>Alone</th><th>With OCT- held</th></tr></thead>
-      <tbody>
-        <tr><td>SELECT</td><td data-label="Alone">PITCH, by notes: C1 to C3.</td><td data-label="With OCT- held">The same.</td></tr>
-        <tr><td>OCT+ held, SELECT</td><td data-label="Alone">PITCH by octaves: C0 to C5.</td><td data-label="With OCT- held">The same.</td></tr>
-        <tr><td>OCT+ pressed</td><td data-label="Alone">HPF on or off, when SELECT did not turn while it was down.</td><td data-label="With OCT- held">The same.</td></tr>
-        <tr><td>ALGORITHM, BODY</td><td data-label="Alone">TRIG: OFF, or LFO 1 to 12.</td><td data-label="With OCT- held">The drive’s type: FOLD, CLIP or CRUSH.</td></tr>
-        <tr><td>ALGORITHM, CLICK</td><td data-label="Alone">The click’s mode: MIX, FM or RING.</td><td data-label="With OCT- held">The drive’s type.</td></tr>
-        <tr><td>ALGORITHM, RUMBLE</td><td data-label="Alone">TRIG, as with BODY.</td><td data-label="With OCT- held">The drive’s type.</td></tr>
-        <tr><td>LFO held</td><td data-label="Alone">The amounts of an LFO on the four values of the set in hand; PRESETS: on the pitch.</td><td data-label="With OCT- held">1 a click.</td></tr>
-      </tbody>
-    </table>
-    <table>
-      <thead><tr><th>Set</th><th>KNOB1</th><th>KNOB2</th><th>KNOB3</th><th>KNOB4</th></tr></thead>
-      <tbody>
-        <tr><td>BODY</td><td data-label="KNOB1">LEVEL: the body’s volume</td><td data-label="KNOB2">DECAY</td><td data-label="KNOB3">SWEEP</td><td data-label="KNOB4">DRIVE</td></tr>
-        <tr><td>BODY, OCT- held</td><td data-label="KNOB1">ATTACK: the body’s</td><td data-label="KNOB2">DEPTH</td><td data-label="KNOB3">PHASE: where the body’s wave starts</td><td data-label="KNOB4">PITCH CURVE: the body’s</td></tr>
-        <tr><td>BODY, OCT+ held</td><td data-label="KNOB1">ATK CURVE: the shape of the body’s attack</td><td data-label="KNOB2">Free</td><td data-label="KNOB3">Free</td><td data-label="KNOB4">Free</td></tr>
-        <tr><td>CLICK</td><td data-label="KNOB1">LEVEL: the click’s volume, with its noise</td><td data-label="KNOB2">TUNE: its pitch</td><td data-label="KNOB3">SNAP: its length</td><td data-label="KNOB4">SWEEP: how far its pitch starts above TUNE</td></tr>
-        <tr><td>CLICK, OCT- held</td><td data-label="KNOB1">NOISE: how much</td><td data-label="KNOB2">ATTACK: the click’s</td><td data-label="KNOB3">SNAP in the smallest steps</td><td data-label="KNOB4">TONE: the noise, dark to bright</td></tr>
-        <tr><td>CLICK, OCT+ held</td><td data-label="KNOB1">PITCH CURVE: the click’s</td><td data-label="KNOB2">Free</td><td data-label="KNOB3">Free</td><td data-label="KNOB4">Free</td></tr>
-        <tr><td>RUMBLE</td><td data-label="KNOB1">LEVEL: the rumble’s volume</td><td data-label="KNOB2">LENGTH: where the rumble closes on the clock, 1/16 of a bar to 4 bars</td><td data-label="KNOB3">DARK: its low-pass, 50 to 400 Hz</td><td data-label="KNOB4">GRIT: its own drive</td></tr>
-        <tr><td>RUMBLE, OCT+ held</td><td data-label="KNOB1">REVERB: how much of the echoes</td><td data-label="KNOB2">DELAY: how much of the repeats</td><td data-label="KNOB3">DLY TIME</td><td data-label="KNOB4">DLY BACK</td></tr>
-        <tr><td>RUMBLE, LFO held</td><td data-label="KNOB1">LFO LEVEL: the LFO’s amount on LEVEL</td><td data-label="KNOB2">On LENGTH</td><td data-label="KNOB3">LFO DARK: the LFO’s amount on DARK</td><td data-label="KNOB4">On GRIT</td></tr>
-        <tr><td>RUMBLE, OCT- held</td><td data-label="KNOB1">PHASE: the rumble against the body</td><td data-label="KNOB2">ATTACK: the rumble’s</td><td data-label="KNOB3">SIZE: the time of the echoes, 150 ms to 2.4 s</td><td data-label="KNOB4">Free</td></tr>
-      </tbody>
-    </table>
-    <p>The screen: the picture of one hit (its wave and its pitch, as above), which flashes on each hit; the note and the trigger’s LFO at the top; the four dials; a fourth box for the kick beside the three voices.</p>
-  </section>
-
-  <section aria-labelledby="h-choices">
-    <h2 id="h-choices">Choices and limits</h2>
-    <div class="choice"><strong>The sound engine runs sample by sample.</strong><span>The browser plays the kick in its audio thread, at twice the sample rate, then filters it down, so the drive and the click make less false tone. The hits of the LFO land on the exact sample. A knob changes the sound while it plays.</span></div>
-    <div class="choice"><strong>The picture is the engine’s own output.</strong><span>The playhead shows where the sound is in the picture, from the audio clock. The picture is one hit from silence, so while the sequencer plays, the tail of the hit before is in the sound and not in the picture. The wave is one hit from silence, computed at 96 000 samples a second by the same code that makes the sound. Below one sample a pixel, each sample has its dot.</span></div>
-    <div class="choice"><strong>Three volumes, and KNOB1 is the volume in each set.</strong><span>The body’s LEVEL at 0 leaves the click and the rumble as they are. The click’s LEVEL also moves its noise. In FM and RING the click is inside the body: its LEVEL is then how much it bends or multiplies the body, and a silent body silences it.</span></div>
-    <div class="choice"><strong>The texture is beside the body, not in its place.</strong><span>The body has two outputs: the raw one, as before, and the texture. Each has its LEVEL. The rumble takes the raw body and the click, not the texture. The noise goes into the gate, so the gate shapes it with the body. The texture’s reverb is its own: it is brighter than the rumble’s. The texture’s knobs have no place on the FM-1 yet. A preset saved before the texture loads with the texture’s LEVEL at 0, so it sounds as it did.</span></div>
-    <div class="choice"><strong>The kick is not a style.</strong><span>It is a fourth voice with its own small engine, not a patch of blocks. It costs two sines, four envelopes, a noise and the rumble’s four echoes, less than a voice.</span></div>
-    <div class="choice"><strong>The wave and the curves are mine.</strong><span>The manual does not give them. I use a sine and curves that fall fast, then slowly, which is the common way to make this kind of kick. The ranges in the table above are a first estimate, to tune by ear on this page.</span></div>
-    <div class="choice"><strong>The drive is after the level envelope.</strong><span>The manual does not say where it is. After the envelope, the drive acts as a compressor on the start of the hit, which is what the manual describes.</span></div>
-    <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
-    <div class="choice"><strong>MOD LEVEL is one slider for six knobs.</strong><span>TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each marker. The markers are above the slider, 1 to 5 of them (with one marker the slider is off, and the knobs in the box are the click’s), and they share its travel in equal parts: with 3 markers, marker 2 is at the middle. Select a marker: MOD LEVEL goes to that marker, and the knobs in the box below show its values and change them. Between two markers the box shows the mix of the two markers, and the knobs do not move. Click above the slider between two markers: a new marker goes there with the mix of that place, and all the markers take equal places again. Drag a marker along the slider, or use Move Left and Move Right: the marker goes to its new place with its values, and the order of the markers changes. Remove Marker takes the selected marker out, after a confirmation. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before MOD LEVEL. On the FM-1, an LFO of the bank can move MOD LEVEL; it has no knob there yet.</span></div>
-    <div class="choice"><strong>The body has a MOD LEVEL too.</strong><span>PITCH, DEPTH, SWEEP and PITCH CURVE have a value at each marker, with the same slider and the same markers as the click’s. The two MOD LEVELs are apart: one does not move the other. Between two markers the PITCH is between two notes. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before the body’s MOD LEVEL. On the FM-1, an LFO of the bank can move it; it has no knob there yet.</span></div>
-    <div class="choice"><strong>Each knob of a layer is in its MOD LEVEL.</strong><span>The four layers have a MOD LEVEL, and each knob of a layer has a value at each marker, its LEVEL too. A knob with a list of values, as DRIVE TYPE, CLICK MODE, LENGTH or LFO SHAPE, takes the nearest value of its list between two markers. A preset saved before this has the same value at each marker.</span></div>
-    <div class="choice"><strong>Two rows of rotary knobs below the picture.</strong><span>A column for each layer, in view with each tab. MOD LEVEL is the same value as the slider in the layer’s tab: move one and the other moves. With one marker it is off, as the slider is. VOLUME is the layer’s last gain before the mix, from silence to full. It is not the layer’s LEVEL: no marker keeps it, MOD LEVEL does not move it, and it changes nothing that the layer feeds. With the body’s VOLUME at 0, the body still feeds the texture and the rumble. In FM and RING the click is inside the body, so the click’s VOLUME moves only its noise. Drag a knob up for more and down for less, or use the arrow keys.</span></div>
-    <div class="choice"><strong>The rumble’s attack is its own.</strong><span>Before, the rumble came up as the body went down. Now a long body can have a fast rumble, and a short body a slow one.</span></div>
-    <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a number of cycles in a bar at the tempo, it has three shapes and a phase, and it starts its cycle when you press Play. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
-    <div class="choice"><strong>The delay and the reverb are the rumble’s own.</strong><span>They are not the DR1’s delay and reverb, and the body and the click do not go to the output through them. The delay needs memory in the firmware: half a bar at 40 BPM is 3 s, about 16 500 samples at one eighth of the sample rate.</span></div>
-    <div class="choice"><strong>The rumble is cheap.</strong><span>It is below 400 Hz, so the firmware can run it at one eighth of the sample rate: four echoes of about 300 samples each.</span></div>
-    <div class="choice"><strong>The rumble takes the kick, not the drones.</strong><span>The drones have the DR1’s delay and reverb. A send from the drones into the rumble is possible later.</span></div>
-    <div class="choice"><strong>Ideas I did not put in.</strong><span>A drone voice as the kick’s FM source, so that the kick takes the colour of OP3. Velocity from the height of the LFO at the hit. A gate mode that holds the kick while the LFO is up.</span></div>
-    <div class="choice"><strong>No mixer strip in the first version.</strong><span>The kick has a level, sits in the centre and has no sends to the delay or the reverb. A fourth strip in the mixer is a second step.</span></div>
-    <div class="choice"><strong>OP4 and OP5 stay free.</strong><span>The same trigger can play other drums there later.</span></div>
-    <div class="choice"><strong>The processor’s load is not measured.</strong><span>The load of V0.33 with the new LFO bank is not known yet. Read it with SEL held before this goes in.</span></div>
-  </section>
 </main>
 
 <script>
@@ -830,8 +678,7 @@ function makeKickEngine(outRate) {
   ];
   var value = {}, controls = {}, tab = 'click', soloOn = false;
   function copy() { var o = {}; for (var k in value) o[k] = value[k]; return o; }
-  function isLayer(name) { return name === 'body' || name === 'texture' || name === 'click' || name === 'rumble'; }
-  function soloLayer() { return soloOn && isLayer(tab) ? tab : 'all'; }
+  function soloLayer() { return soloOn ? tab : 'all'; }
 
   /* ---- the sound: the engine in the browser's audio thread; in the page's own thread when the browser refuses that ---- */
   var audio = null, post = null, pending = [], readout = document.getElementById('readout'), engineLine = document.getElementById('engine');
@@ -1154,7 +1001,7 @@ function makeKickEngine(outRate) {
     };
   }
   /* VOLUME, one for each layer: not a knob of a marker, so MOD LEVEL does not move it */
-  ['c', 'b', 't', 'r'].forEach(function (g) {      /* the rotary knob only. No slider in the tab, so no way with no drag for a pointer: Kevin's decision, 2026-11-23 */
+  ['c', 'b', 't', 'r'].forEach(function (g) {      /* the rotary knob only. No slider with the layer's knobs, so no way with no drag for a pointer: Kevin's decision, 2026-11-23 */
     var id = g + 'vol', showDial = makeDial(document.getElementById('dial-' + id), 127, 16, function (v) {
       value[id] = Math.max(0, Math.min(127, Math.round(v))); controls[id].show();
       var one = {}; one[id] = value[id]; send({ set: one }); redraw(true);
@@ -1183,12 +1030,11 @@ function makeKickEngine(outRate) {
       if (value[PTS] < 0) value[MOD] = 0;      /* one marker: MOD LEVEL stays on it, and its slider is off */
       var now = markNow(), count = value[PTS] + 2, low = Math.min(count - 2, Math.floor(value[MOD] / 120 * (count - 1))), percent = Math.round(value[MOD] / 120 * 100) + ' %';
       knobs.forEach(function (id) { setKnob(id, now >= 0 ? value[id + (now + 1)] : Math.round(T.morph(value, id, g))); controls[id].input.disabled = now < 0; });
-      whereText.textContent = now >= 0 ? 'Marker ' + (now + 1) + ' of ' + count + '. The knobs below change this marker.' + (count < 2 ? ' Click above the slider to add a marker.' : ' Drag it, or use Move Left and Move Right, to change the order.')
+      whereText.textContent = now >= 0 ? 'Marker ' + (now + 1) + ' of ' + count + '. The knobs below change this marker.' + (count < 2 ? ' Click above the slider to add a marker.' : ' Drag it to change the order.')
         : 'Between marker ' + (low + 1) + ' and marker ' + (low + 2) + ': a mix of the two.' + (count < 5 ? ' Click above the slider to keep these values as a new marker.' : '');
       marks.forEach(function (mark, n) {      /* the slider's thumb stops 8 px from each end of its track: the markers do the same */
         mark.hidden = n >= count; mark.style.left = 'calc(30px + ' + (count > 1 ? Math.min(1, n / (count - 1)) : 0) + ' * (100% - 60px))'; mark.setAttribute('aria-pressed', String(n === now));
       });
-      part('left').disabled = now <= 0; part('right').disabled = now < 0 || now >= count - 1;
       removeButton.disabled = count < 2 || now < 0; modInput.disabled = count < 2; confirmBox.hidden = true;
       strip.classList.toggle('open', count < 5);
       var place = percent + (now >= 0 ? ', marker ' + (now + 1) : ', between marker ' + (low + 1) + ' and marker ' + (low + 2));
@@ -1202,7 +1048,7 @@ function makeKickEngine(outRate) {
         var mark = document.createElement('button');
         mark.type = 'button'; mark.className = 'mark'; mark.setAttribute('aria-label', 'Marker ' + (n + 1));      /* no number to see: a marker is known by its place, and its place can change */
         mark.addEventListener('click', function (e) { if (e.timeStamp - dragEnd < 400) return; value[MOD] = markAt(n); morphChanged(); });
-        /* a drag along the slider puts the marker at the place where it is let go, after 8 px so that a click stays a click */
+        /* a drag along the slider puts the marker at the place where it is let go, after 8 px so that a click stays a click. No way with no drag and no keyboard route: Kevin's decision, 2026-11-24 */
         var dragX = null, dragged = false;
         mark.addEventListener('pointerdown', function (e) { if (value[PTS] >= 0) { mark.setPointerCapture(e.pointerId); dragX = e.clientX; dragged = false; } });
         mark.addEventListener('pointermove', function (e) {
@@ -1256,8 +1102,6 @@ function makeKickEngine(outRate) {
       value[MOD] = markAt(to); morphChanged();
       part('moved').textContent = 'Marker moved to place ' + (to + 1) + ' of ' + (value[PTS] + 2) + '.';
     }
-    part('left').addEventListener('click', function () { moveMarker(markNow(), markNow() - 1); part(part('left').disabled ? 'right' : 'left').focus(); });
-    part('right').addEventListener('click', function () { moveMarker(markNow(), markNow() + 1); part(part('right').disabled ? 'left' : 'right').focus(); });
     strip.addEventListener('click', function (e) {      /* a click between two markers: a new marker there. No keyboard route: Kevin's decision, 2026-11-23 (D7) */
       if (e.target !== strip || e.timeStamp - dragEnd < 400) return;
       var box = strip.getBoundingClientRect();
@@ -1274,29 +1118,19 @@ function makeKickEngine(outRate) {
   makeMorph('c', MARKER);
   makeMorph('r', RUMBLE_MARKER);
 
-  /* ---- the tabs ---- */
-  var TABS = ['click', 'body', 'texture', 'rumble', 'presets'];
-  function openTab(name, focus) {
+  /* ---- the parts: one is open at a time, selected with the push button under its column of knobs ---- */
+  var PARTS = ['click', 'body', 'texture', 'rumble'];
+  function openPart(name) {
     tab = name;
-    TABS.forEach(function (t) {
-      var button = document.getElementById('tab-' + t), on = t === name;
-      button.setAttribute('aria-selected', String(on)); button.tabIndex = on ? 0 : -1;
-      document.getElementById('panel-' + t).hidden = !on;
-      if (on && focus) button.focus();
+    PARTS.forEach(function (t) {
+      document.getElementById('part-' + t).setAttribute('aria-pressed', String(t === name));
+      document.getElementById('panel-' + t).hidden = document.getElementById('slide-' + t).hidden = t !== name;
     });
-    try { localStorage.setItem('dr1-kick-tab', name); } catch (e) { /* no storage: the page opens on the first tab */ }
-    document.getElementById('solo').disabled = !isLayer(name);
+    try { localStorage.setItem('dr1-kick-tab', name); } catch (e) { /* no storage: the page opens on the first part */ }
     send({ solo: soloLayer() });
     showSees(); redraw(false);
   }
-  TABS.forEach(function (t, n) {
-    var button = document.getElementById('tab-' + t);
-    button.addEventListener('click', function () { openTab(t, false); });
-    button.addEventListener('keydown', function (e) {
-      var last = TABS.length - 1, to = e.key === 'ArrowRight' ? (n + 1) % TABS.length : e.key === 'ArrowLeft' ? (n + last) % TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1;
-      if (to >= 0) { e.preventDefault(); openTab(TABS[to], true); }
-    });
-  });
+  PARTS.forEach(function (t) { document.getElementById('part-' + t).addEventListener('click', function () { openPart(t); }); });
 
   /* ---- the buttons ---- */
   var deviceBox = document.querySelector('.device');
@@ -1315,6 +1149,9 @@ function makeKickEngine(outRate) {
     seqBox.style.top = Math.round(seqOpen.getBoundingClientRect().bottom + window.scrollY + 8) + 'px'; seqBox.showModal();
   });
   document.getElementById('seq-close').addEventListener('click', function () { seqBox.close(); });
+  var presetsBox = document.getElementById('presets'), presetsOpen = document.getElementById('presets-open');      /* the presets: a dialog below its button, as the sequencer */
+  presetsOpen.addEventListener('click', function () { presetsBox.style.top = Math.round(presetsOpen.getBoundingClientRect().bottom + window.scrollY + 8) + 'px'; presetsBox.showModal(); });
+  document.getElementById('presets-close').addEventListener('click', function () { presetsBox.close(); });
   soloButton.addEventListener('click', function () {
     soloOn = !soloOn; soloButton.setAttribute('aria-pressed', String(soloOn));
     send({ solo: soloLayer() });
@@ -1330,7 +1167,10 @@ function makeKickEngine(outRate) {
   var DRAFT = Number(document.querySelector('.version').textContent.replace(/\D/g, ''));      /* the draft of the page, kept with each preset and each copy it writes: a later draft that changes a knob's range can then convert the ones from before. One from before Draft 43 has none */
   var presetList = document.getElementById('preset-list'), presetName = document.getElementById('preset-name'), presetStatus = document.getElementById('preset-status');
   var presetConfirm = document.getElementById('preset-confirm'), presetNote = '';
-  function tell(text) { presetStatus.textContent = text + (presetNote ? ' ' + presetNote : ''); }
+  function tell(text) {      /* in the dialog, and below the picture while the dialog is closed: a save that failed must be seen from the page */
+    presetStatus.textContent = text + (presetNote ? ' ' + presetNote : '');
+    document.getElementById('page-status').textContent = presetsBox.open ? '' : presetStatus.textContent;
+  }
   function slug(name) { return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); }
   function chosen() { for (var i = 0; i < presets.length; i++) if (presets[i].id === presetList.value) return presets[i]; return null; }
   function showPresets() {
@@ -1505,9 +1345,9 @@ function makeKickEngine(outRate) {
     }, failed);
   }, localPresets);
 
-  var first = TABS[0];
-  try { var saved = localStorage.getItem('dr1-kick-tab'); if (TABS.indexOf(saved) >= 0) first = saved; } catch (e) { /* no storage */ }
-  setSpan(); rest(); openTab(first, false); fit(); showPattern(); patternText();
+  var first = PARTS[0];
+  try { var saved = localStorage.getItem('dr1-kick-tab'); if (PARTS.indexOf(saved) >= 0) first = saved; } catch (e) { /* no storage */ }
+  setSpan(); rest(); openPart(first); fit(); showPattern(); patternText();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { redraw(false); });
 })();
 </script>
