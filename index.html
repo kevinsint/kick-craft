@@ -73,10 +73,15 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .scope #cursor { pointer-events: none; }
 .readout { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--dev-muted); min-height: 1.55rem; max-width: none; flex: 1 1 20rem; }
-/* below the picture, at its right: one rotary knob for each layer's MOD LEVEL. A knob is the same value as the slider in its tab; drag it up or down */
+/* below the picture, at its right: two rows of rotary knobs, a column for each layer. MOD LEVEL is the same value as the slider in the layer's tab; VOLUME is the layer's last gain. Drag a knob up or down */
 .under { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); align-items: flex-start; }
-.dials { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: center; margin-left: auto; font: 600 1rem var(--mono); }
-.dial-box { display: grid; justify-items: center; gap: 2px; min-width: 4.5rem; }
+.dials { display: grid; grid-template-columns: auto repeat(4, minmax(4.5rem, auto)); gap: 4px var(--s1); justify-items: center; align-items: center; margin-left: auto; font: 600 1rem var(--mono); }
+.dials .of { justify-self: end; }
+@media (max-width: 30rem) {
+  .dials { grid-template-columns: repeat(4, 1fr); width: 100%; margin-left: 0; }
+  .dials .of { grid-column: 1 / -1; justify-self: start; }
+  .dials .corner { display: none; }
+}
 .dial { position: relative; box-sizing: border-box; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--c); background: #000; cursor: ns-resize; touch-action: none; }
 .dial::after { content: ""; position: absolute; left: 50%; top: 4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--c); transform-origin: 50% 16px; transform: rotate(var(--turn, -135deg)); }
 .dial[aria-disabled="true"] { border-style: dashed; border-color: var(--dev-edge); cursor: default; }
@@ -146,7 +151,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 50</p>
+      <p class="version">Draft 52</p>
     </div>
     <div class="device">
       <div class="row">
@@ -174,13 +179,19 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
         </div>
         <div class="under">
           <p class="readout"><span id="readout"></span> <span id="engine" role="status"></span></p>
-          <div class="dials" role="group" aria-labelledby="dials-name">
-            <span id="dials-name">MOD LEVEL</span>
+          <div class="dials">
             <span class="hidden-text" id="dials-hint">The same value as the MOD LEVEL slider in the layer’s tab. Off while the layer has one marker: add a marker in its tab.</span>
-            <div class="dial-box"><span class="dial" id="dial-c" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="CLICK MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#ff8ad8"></span><span aria-hidden="true">CLICK</span></div>
-            <div class="dial-box"><span class="dial" id="dial-b" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="BODY MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#5adee6"></span><span aria-hidden="true">BODY</span></div>
-            <div class="dial-box"><span class="dial" id="dial-t" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="TEXTURE MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#b79cff"></span><span aria-hidden="true">TEXTURE</span></div>
-            <div class="dial-box"><span class="dial" id="dial-r" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="RUMBLE MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#8be36b"></span><span aria-hidden="true">RUMBLE</span></div>
+            <span class="corner"></span><span aria-hidden="true">CLICK</span><span aria-hidden="true">BODY</span><span aria-hidden="true">TEXTURE</span><span aria-hidden="true">RUMBLE</span>
+            <span class="of" aria-hidden="true">MOD LEVEL</span>
+            <span class="dial" id="dial-c" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="CLICK MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#ff8ad8"></span>
+            <span class="dial" id="dial-b" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="BODY MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#5adee6"></span>
+            <span class="dial" id="dial-t" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="TEXTURE MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#b79cff"></span>
+            <span class="dial" id="dial-r" role="slider" tabindex="0" aria-orientation="vertical" aria-describedby="dials-hint" aria-label="RUMBLE MOD LEVEL" aria-valuemin="0" aria-valuemax="120" style="--c:#8be36b"></span>
+            <span class="of" aria-hidden="true">VOLUME</span>
+            <span class="dial" id="dial-cvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="CLICK VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#ff8ad8"></span>
+            <span class="dial" id="dial-bvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="BODY VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#5adee6"></span>
+            <span class="dial" id="dial-tvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="TEXTURE VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#b79cff"></span>
+            <span class="dial" id="dial-rvol" role="slider" tabindex="0" aria-orientation="vertical" aria-label="RUMBLE VOLUME" aria-valuemin="0" aria-valuemax="127" style="--c:#8be36b"></span>
           </div>
         </div>
         <p class="hidden-text" id="status"></p>
@@ -214,7 +225,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
               </div>
             </div>
           </div>
-          <div class="knobs" id="click"></div>
         </div>
       </div>
       <div role="tabpanel" id="panel-body" aria-labelledby="tab-body">
@@ -239,7 +249,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
               </div>
             </div>
           </div>
-          <div class="knobs" id="kick"></div>
         </div>
       </div>
       <div role="tabpanel" id="panel-texture" aria-labelledby="tab-texture" hidden>
@@ -264,7 +273,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
               </div>
             </div>
           </div>
-          <div class="knobs" id="texture"></div>
         </div>
       </div>
       <div role="tabpanel" id="panel-rumble" aria-labelledby="tab-rumble" hidden>
@@ -289,7 +297,6 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
               </div>
             </div>
           </div>
-          <div class="knobs" id="rumble"></div>
         </div>
       </div>
       <div role="tabpanel" id="panel-presets" aria-labelledby="tab-presets" hidden>
@@ -452,8 +459,8 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
     <div class="choice"><strong>MOD LEVEL is one slider for six knobs.</strong><span>TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each marker. The markers are above the slider, 1 to 5 of them (with one marker the slider is off, and the knobs in the box are the click’s), and they share its travel in equal parts: with 3 markers, marker 2 is at the middle. Select a marker: MOD LEVEL goes to that marker, and the knobs in the box below show its values and change them. Between two markers the box shows the mix of the two markers, and the knobs do not move. Click above the slider between two markers: a new marker goes there with the mix of that place, and all the markers take equal places again. Remove Marker takes the selected marker out, after a confirmation. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before MOD LEVEL. On the FM-1, an LFO of the bank can move MOD LEVEL; it has no knob there yet.</span></div>
     <div class="choice"><strong>The body has a MOD LEVEL too.</strong><span>PITCH, DEPTH, SWEEP and PITCH CURVE have a value at each marker, with the same slider and the same markers as the click’s. The two MOD LEVELs are apart: one does not move the other. Between two markers the PITCH is between two notes. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before the body’s MOD LEVEL. On the FM-1, an LFO of the bank can move it; it has no knob there yet.</span></div>
-    <div class="choice"><strong>The texture and the rumble have a MOD LEVEL too.</strong><span>Each knob of the layer but its LEVEL has a value at each marker. A knob with a list of values, as LENGTH, DLY TIME, LFO PER BAR and LFO SHAPE, takes the nearest value of its list between two markers. A preset saved before this draft has one marker in each.</span></div>
-    <div class="choice"><strong>Four rotary knobs below the picture.</strong><span>One for each layer’s MOD LEVEL, in view with each tab. A knob and the slider in its tab are the same value: move one and the other moves. Drag a knob up for more and down for less, or use the arrow keys. With one marker the knob is off, as the slider is.</span></div>
+    <div class="choice"><strong>Each knob of a layer is in its MOD LEVEL.</strong><span>The four layers have a MOD LEVEL, and each knob of a layer has a value at each marker, its LEVEL too. A knob with a list of values, as DRIVE TYPE, CLICK MODE, LENGTH or LFO SHAPE, takes the nearest value of its list between two markers. A preset saved before this has the same value at each marker.</span></div>
+    <div class="choice"><strong>Two rows of rotary knobs below the picture.</strong><span>A column for each layer, in view with each tab. MOD LEVEL is the same value as the slider in the layer’s tab: move one and the other moves. With one marker it is off, as the slider is. VOLUME is the layer’s last gain before the mix, from silence to full. It is not the layer’s LEVEL: no marker keeps it, MOD LEVEL does not move it, and it changes nothing that the layer feeds. With the body’s VOLUME at 0, the body still feeds the texture and the rumble. In FM and RING the click is inside the body, so the click’s VOLUME moves only its noise. Drag a knob up for more and down for less, or use the arrow keys.</span></div>
     <div class="choice"><strong>The rumble’s attack is its own.</strong><span>Before, the rumble came up as the body went down. Now a long body can have a fast rumble, and a short body a slow one.</span></div>
     <div class="choice"><strong>The rumble’s LFO on this page is a small one.</strong><span>Its rate is a number of cycles in a bar at the tempo, it has three shapes and a phase, and it starts its cycle when you press Play. In the FM-1 it is an LFO of the bank, with all its shapes, steps and loops, through the amounts with the LFO key held. The page has the amounts on LEVEL and DARK only.</span></div>
     <div class="choice"><strong>The delay and the reverb are the rumble’s own.</strong><span>They are not the DR1’s delay and reverb, and the body and the click do not go to the output through them. The delay needs memory in the firmware: half a bar at 40 BPM is 3 s, about 16 500 samples at one eighth of the sample rate.</span></div>
@@ -510,15 +517,14 @@ function kickTimes() {
 function makeCore(rate) {
   var T = kickTimes(), TWO_PI = 2 * Math.PI;
   var ECHO = [0.0297, 0.0371, 0.0411, 0.0533];      /* the rumble's four echoes, in seconds: no two in a simple ratio */
-  var p = { bmod: 0, bpts: -1, decay: 64, drive: 30, level: 100, phase: 0, type: 0, attack: 0, acurve: 100, hpf: 1,
-            click: 71, cmod: 0, cpts: -1, tone: 80, mode: 0,
-            rumble: 55, rmod: 0, rpts: -1, bpm: 120, steps: 16, div: 3, pat: 0x1111,
-            tex: 64, tmod: 0, tpts: -1 };
-  /* the texture's and the rumble's knobs, all but LEVEL, at each of the 5 markers of their own MOD LEVEL: the name, then the first value */
-  var TEX_FIRST = { tattack: 0, tdecay: 64, tcurve: 0, topen: 90, tnoise: 50, trev: 40, tsize: 64, tlow: 0, thigh: 127 };
-  var RUMBLE_FIRST = { rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, reverb: 127, size: 55, delay: 0, ddiv: 3, dfbk: 50, lper: 3, lphase: 0, lshape: 0, llevel: 0, ldark: 0 };
+  /* each layer has a MOD LEVEL (`mod`), a number of markers less 2 (`pts`) and a VOLUME (`vol`, 127 is full), which is the last thing before the mix */
+  var p = { bmod: 0, bpts: -1, bvol: 127, cmod: 0, cpts: -1, cvol: 127, rmod: 0, rpts: -1, rvol: 127, tmod: 0, tpts: -1, tvol: 127, bpm: 120, steps: 16, div: 3, pat: 0x1111 };
+  /* every knob of a layer has a value at each of the 5 markers of the layer's MOD LEVEL: the name, then the first value */
+  var BODY_FIRST = { level: 100, attack: 0, acurve: 100, decay: 64, drive: 30, type: 0, phase: 0, hpf: 1 }, CLICK_FIRST = { click: 71, mode: 0, tone: 80 };
+  var TEX_FIRST = { tex: 64, tattack: 0, tdecay: 64, tcurve: 0, topen: 90, tnoise: 50, trev: 40, tsize: 64, tlow: 0, thigh: 127 };
+  var RUMBLE_FIRST = { rumble: 55, rlen: 2, dark: 50, grit: 50, rattack: 81, rphase: 0, reverb: 127, size: 55, delay: 0, ddiv: 3, dfbk: 50, lper: 3, lphase: 0, lshape: 0, llevel: 0, ldark: 0 };
   var d = {}, k, name;
-  for (k = 1; k <= 5; k++) { for (name in TEX_FIRST) p[name + k] = TEX_FIRST[name]; for (name in RUMBLE_FIRST) p[name + k] = RUMBLE_FIRST[name]; }
+  [BODY_FIRST, CLICK_FIRST, TEX_FIRST, RUMBLE_FIRST].forEach(function (first) { for (k = 1; k <= 5; k++) for (name in first) p[name + k] = first[name]; });
   for (k = 1; k <= 5; k++) { p['snap' + k] = 64; p['tune' + k] = 48; p['bend' + k] = 76; p['cattack' + k] = 0; p['ccurve' + k] = 96; p['noise' + k] = 42;
     p['pitch' + k] = 24; p['depth' + k] = 56; p['sweep' + k] = 36; p['curve' + k] = 96; }      /* ... and the body's PITCH, DEPTH, SWEEP and PITCH CURVE at each of the 5 markers of its own MOD LEVEL */      /* the click's SNAP, TUNE, SWEEP, ATTACK, PITCH CURVE and NOISE at each of the 5 markers of MOD LEVEL */
   var lines = ECHO.map(function (s) { return new Float32Array(Math.floor(s * rate)); }), at = [0, 0, 0, 0], damp = [0, 0, 0, 0], back = [0, 0, 0, 0];
@@ -540,26 +546,29 @@ function makeCore(rate) {
 
   function set(values) {
     for (var name in values) p[name] = values[name];
+    function body(knob) { return T.morph(p, knob, 'b'); }
+    function click(knob) { return T.morph(p, knob, 'c'); }
     function tex(knob) { return T.morph(p, knob, 't'); }
     function rum(knob) { return T.morph(p, knob, 'r'); }
     function listed(knob) { return Math.round(rum(knob)); }      /* a knob with a list of values: the nearest one between two markers */
     d.note = 16.3516 * Math.pow(2, T.morph(p, 'pitch', 'b') / 12);       /* 0 is C0 */
-    d.attack = T.attack(p.attack); d.attackBend = 5 - p.acurve / 127 * 15; d.levelTau = T.decay(p.decay) / 5;
+    d.attack = T.attack(body('attack')); d.attackBend = 5 - body('acurve') / 127 * 15; d.levelTau = T.decay(body('decay')) / 5;
     d.depth = T.depth(T.morph(p, 'depth', 'b')); d.octaves = T.morph(p, 'sweep', 'b') / 127 * 5; d.snap = T.morph(p, 'curve', 'b') / 127;
-    d.gain = 1 + p.drive / 127 * 15; d.wet = Math.min(1, p.drive / 16); d.bend = p.drive / 127;
-    d.hold = 1 + Math.floor(p.drive / 127 * 24 * rate / 48000); d.crush = Math.pow(2, 11 - p.drive / 127 * 8);      /* CRUSH: fewer samples, fewer bits */
-    d.amount = p.click / 127; d.clickHz = T.tune(T.morph(p, 'tune', 'c')); d.clickTime = T.snap(T.morph(p, 'snap', 'c')); d.clickTau = d.clickTime / 5;
+    d.gain = 1 + body('drive') / 127 * 15; d.wet = Math.min(1, body('drive') / 16); d.bend = body('drive') / 127;
+    d.hold = 1 + Math.floor(body('drive') / 127 * 24 * rate / 48000); d.crush = Math.pow(2, 11 - body('drive') / 127 * 8);      /* CRUSH: fewer samples, fewer bits */
+    d.amount = click('click') / 127; d.mode = Math.round(click('mode')); d.type = Math.round(body('type')); d.hpf = Math.round(body('hpf')); d.level = body('level') / 127; d.phase = body('phase') / 128;
+    d.bodyVol = p.bvol / 127; d.clickVol = p.cvol / 127; d.texVol = p.tvol / 127; d.rumbleVol = p.rvol / 127; d.clickHz = T.tune(T.morph(p, 'tune', 'c')); d.clickTime = T.snap(T.morph(p, 'snap', 'c')); d.clickTau = d.clickTime / 5;
     d.clickAttack = T.clickAttack(T.morph(p, 'cattack', 'c')); d.clickOct = T.morph(p, 'bend', 'c') / 127 * 5; d.clickSnap = T.morph(p, 'ccurve', 'c') / 127;
-    d.noiseLevel = T.morph(p, 'noise', 'c') / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(p.tone) / (rate / noiseEvery));
+    d.noiseLevel = T.morph(p, 'noise', 'c') / 127 * 2.5 * d.amount;      /* the noise is part of the click: the click's LEVEL moves it too */ d.noiseKeep = Math.exp(-TWO_PI * T.tone(click('tone')) / (rate / noiseEvery));
     d.hpKeep = 1 - TWO_PI * 30 / rate;
-    d.texLevel = p.tex / 127; d.texAttack = T.textureAttack(tex('tattack')); d.texDecay = T.textureDecay(tex('tdecay')); d.texBend = 5 - tex('tcurve') / 127 * 15; d.texOpen = T.textureOpen(tex('topen')) / 30;
+    d.texLevel = tex('tex') / 127; d.texAttack = T.textureAttack(tex('tattack')); d.texDecay = T.textureDecay(tex('tdecay')); d.texBend = 5 - tex('tcurve') / 127 * 15; d.texOpen = T.textureOpen(tex('topen')) / 30;
     d.texNoise = tex('tnoise') / 127 * 3; d.texReverb = tex('trev') / 127;
     d.cutLow = tex('tlow') > 0; d.cutHigh = tex('thigh') < 127;
     d.cutLowKeep = Math.exp(-TWO_PI * T.textureLow(tex('tlow')) / rate); d.cutHighKeep = Math.exp(-TWO_PI * T.textureHigh(tex('thigh')) / rate);
     for (k = 0; k < 4; k++) texBack[k] = Math.pow(0.001, TEX_ECHO[k] / T.textureSize(tex('tsize')));
-    if (!p.tex) { for (k = 0; k < 4; k++) { texLines[k].fill(0); texDamp[k] = 0; } passLines[0].fill(0); passLines[1].fill(0); texGate = tex1 = tex2 = cutLow1 = cutLow2 = cutHigh1 = cutHigh2 = 0; }
+    if (!d.texLevel) { for (k = 0; k < 4; k++) { texLines[k].fill(0); texDamp[k] = 0; } passLines[0].fill(0); passLines[1].fill(0); texGate = tex1 = tex2 = cutLow1 = cutLow2 = cutHigh1 = cutHigh2 = 0; }
     /* a voice lives as long as its longest part: the texture's noise goes on until its gate is closed */
-    d.life = Math.floor(rate * (Math.max(d.attack + 3 * T.decay(p.decay), d.clickAttack + 3 * d.clickTime, p.tex ? d.texDecay : 0) + 0.05));
+    d.life = Math.floor(rate * (Math.max(d.attack + 3 * T.decay(body('decay')), d.clickAttack + 3 * d.clickTime, d.texLevel ? d.texDecay : 0) + 0.05));
     d.length = T.length(listed('rlen'), p.bpm);      /* LENGTH, a part of a bar at the tempo, only closes the gate */
     for (k = 0; k < 4; k++) back[k] = Math.pow(0.001, ECHO[k] / T.size(rum('size')));      /* each echo's way back: -60 dB after SIZE. Not from LENGTH: the tempo must not change the rumble's tone */
     d.darkHz = T.dark(rum('dark')); d.darkKeep = Math.exp(-TWO_PI * d.darkHz / rate);
@@ -568,13 +577,13 @@ function makeCore(rate) {
     if (darkTo < 0) darkNow = darkTo = d.darkKeep; d.grit = 1 + rum('grit') / 127 * 11;
     d.rumbleAttack = T.rumbleAttack(rum('rattack'));
     d.late = Math.min(late.length - 1, Math.floor(rum('rphase') / 128 / d.note * rate));
-    d.rumbleLevel = p.rumble / 127 * 1.2;
+    d.rumbleLevel = rum('rumble') / 127 * 1.2;
     d.stepLen = rate * 240 / p.bpm / T.divisions[p.div];
-    if (!p.rumble) { for (k = 0; k < 4; k++) { lines[k].fill(0); damp[k] = 0; } late.fill(0); echo.fill(0); dark1 = dark2 = 0; }
+    if (!d.rumbleLevel) { for (k = 0; k < 4; k++) { lines[k].fill(0); damp[k] = 0; } late.fill(0); echo.fill(0); dark1 = dark2 = 0; }
   }
   function hit() {
     if (cur) { old = cur; old.fade = 1; }       /* the hit before fades in 2 ms: no step in the wave */
-    cur = { n: 0, phase: p.phase / 128, phase2: 0, noise: 0, white: 0, seed: 22222, grain: 0, seed2: 77777, held: 0, fade: 1 };
+    cur = { n: 0, phase: d.phase, phase2: 0, noise: 0, white: 0, seed: 22222, grain: 0, seed2: 77777, held: 0, fade: 1 };
     rumbleN = 0; self.hits++;
   }
   function trig(step) { return Math.floor(p.pat / Math.pow(2, step)) % 2 === 1; }      /* `pat`: one bit for each of the 32 steps, step 1 the lowest. Not with `&`: that is for 31 bits */
@@ -593,10 +602,10 @@ function makeCore(rate) {
     var hz = d.note * Math.pow(2, d.octaves * fallAt(t / d.depth, d.snap));
     var hz2 = d.clickHz * Math.pow(2, d.clickOct * fallAt(t / (d.clickTime * 0.4), d.clickSnap));                   /* the click's own sweep, done at 0.4 of its length */
     var clickLevel = d.amount * clickEnv, click = Math.sin(TWO_PI * v.phase2) * clickLevel, body;
-    if (p.mode === 1) body = Math.sin(TWO_PI * v.phase + click * 6);        /* FM: the click bends the body */
+    if (d.mode === 1) body = Math.sin(TWO_PI * v.phase + click * 6);        /* FM: the click bends the body */
     else {
       body = Math.sin(TWO_PI * v.phase);
-      if (p.mode === 2) body = body * (1 - clickLevel) + body * click * 2;       /* RING */
+      if (d.mode === 2) body = body * (1 - clickLevel) + body * click * 2;       /* RING */
     }
     v.phase += hz / rate; v.phase -= Math.floor(v.phase);
     v.phase2 += hz2 / rate; v.phase2 -= Math.floor(v.phase2);
@@ -606,25 +615,25 @@ function makeCore(rate) {
       v.seed2 = (v.seed2 * 1664525 + 1013904223) >>> 0; v.grain = v.seed2 / 2147483648 - 1;      /* the texture's noise: its own, the same at each hit */
     }
     x = body * level;
-    if (p.type === 0) driven = fold(Math.tanh(x * (1 + 4 * d.bend)) * (1 + 2 * d.bend));      /* a soft top first (it compresses), then the fold */
-    else if (p.type === 1) driven = Math.max(-1, Math.min(1, x * d.gain));
+    if (d.type === 0) driven = fold(Math.tanh(x * (1 + 4 * d.bend)) * (1 + 2 * d.bend));      /* a soft top first (it compresses), then the fold */
+    else if (d.type === 1) driven = Math.max(-1, Math.min(1, x * d.gain));
     else { if (v.n % d.hold === 0) v.held = Math.round(Math.max(-1, Math.min(1, x * 1.5)) * d.crush) / d.crush; driven = v.held; }
     vb = x + (driven - x) * d.wet;
     /* the click (MIX) and the noise go round the drive, with their own envelopes: a loud body does not flatten them */
-    vt = (p.mode === 0 ? click * 1.4 : 0) + v.noise * d.noiseLevel * Math.exp(-t / 0.003);
-    vs = vt + (p.mode === 0 ? 0 : click * 1.4);      /* in FM and RING the click is inside the body: alone, it is its oscillator as it is */
+    vt = (d.mode === 0 ? click * 1.4 : 0) + v.noise * d.noiseLevel * Math.exp(-t / 0.003);
+    vs = vt + (d.mode === 0 ? 0 : click * 1.4);      /* in FM and RING the click is inside the body: alone, it is its oscillator as it is */
     vh = hz; vh2 = hz2;
     vn = v.grain; vg = t < d.texDecay ? (1 - bent(t / d.texDecay, d.texBend)) * (t < d.texAttack ? rise(t, d.texAttack) : 1) : 0;      /* the gate: its DECAY runs from the hit with the shape of its curve, its ATTACK cuts the start */
     v.n++;
   }
   function lowCut(chain, x) {
-    if (!p.hpf) return x;
+    if (!d.hpf) return x;
     for (var j = chain * 3; j < chain * 3 + 3; j++) { hpY[j] = d.hpKeep * (hpY[j] + x - hpX[j]); hpX[j] = x; x = hpY[j]; }
     return x;
   }
 
   function tick() {
-    var b = 0, c = 0, cs = 0, r = 0, grain = 0, gate = 0, x = 0, lv = p.level / 127, sum, was, kick;
+    var b = 0, c = 0, cs = 0, r = 0, grain = 0, gate = 0, x = 0, sum, was, kick;
     if (running) {      /* the sequencer: a hit at each step that is on */
       if (untilStep <= 0) { self.step = stepCount % p.steps; if (trig(self.step)) hit(); stepCount++; untilStep += d.stepLen; }
       untilStep--;
@@ -639,7 +648,7 @@ function makeCore(rate) {
     }
     b = lowCut(0, b); c = lowCut(1, c); cs = lowCut(2, cs);
     kick = b + c;
-    if (p.rumble) {             /* the rumble: four echoes that feed themselves, dark, driven, down at the hit and up again in its own ATTACK */
+    if (d.rumbleLevel) {             /* the rumble: four echoes that feed themselves, dark, driven, down at the hit and up again in its own ATTACK */
       if ((ctl++ & 31) === 0) {      /* the LFO: its place in the cycle, then what it does to the level and to the low-pass */
         var place = lfoPhase + d.lfoFrom; place -= Math.floor(place);      /* LFO PHASE: where in its cycle the LFO is when the trigger's LFO starts */
         var wave = d.lfoShape === 0 ? Math.sin(TWO_PI * place) : d.lfoShape === 1 ? 1 - 4 * Math.abs(place - 0.5) : place < 0.5 ? 1 : -1;
@@ -672,7 +681,7 @@ function makeCore(rate) {
       r = late[(lateAt - d.late + late.length) % late.length];
       lateAt = lateAt + 1 === late.length ? 0 : lateAt + 1;
     }
-    if (p.tex) {      /* the texture: the body before its LEVEL, with noise, through a gate that is a low-pass and a level in one, then its reverb */
+    if (d.texLevel) {      /* the texture: the body before its LEVEL, with noise, through a gate that is a low-pass and a level in one, then its reverb */
       texGate += (gate - texGate) * smooth;      /* the gate moves as a vactrol does: not in one sample */
       var texKeep = Math.exp(-TWO_PI * 30 * Math.pow(d.texOpen, texGate) / rate), texIn = b + grain * d.texNoise, gated;      /* closed: 30 Hz. Open: OPEN */
       tex1 = texIn + texKeep * (tex1 - texIn); tex2 = tex1 + texKeep * (tex2 - tex1);
@@ -695,8 +704,9 @@ function makeCore(rate) {
       x *= d.texLevel;
     }
     /* four volumes: the body's LEVEL is after the inputs of the rumble and of the texture, so a silent body still feeds them */
-    self.body = Math.tanh(b * lv * 0.7); self.click = Math.tanh(cs * 0.7); self.rumble = r; self.texture = Math.tanh(x * 0.7);
-    self.all = Math.tanh((b * lv + c + x) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
+    b *= d.level * d.bodyVol; c *= d.clickVol; x *= d.texVol; r *= d.rumbleVol;      /* each layer's VOLUME: after all that the layer feeds */
+    self.body = Math.tanh(b * 0.7); self.click = Math.tanh(cs * d.clickVol * 0.7); self.rumble = r; self.texture = Math.tanh(x * 0.7);
+    self.all = Math.tanh((b + c + x) * 0.7) + r;       /* a soft top for the sum: the layers together never break up */
     self.out = solo === 'body' ? self.body : solo === 'click' ? self.click : solo === 'rumble' ? r : solo === 'texture' ? self.texture : self.all;
   }
   function message(m) {
@@ -743,7 +753,8 @@ function makeKickEngine(outRate) {
   function ms(seconds) { var v = seconds * 1000; return (v && v < 10 ? v.toFixed(1) : Math.round(v)) + ' ms'; }
   function plain(v) { return String(v); }
   function degrees(v) { return Math.round(v / 128 * 360) + ' deg'; }
-  var KICK = [
+  /* each layer's knobs: all of them have a value at each marker of the layer's MOD LEVEL. One with a list of values takes the nearest value between two markers */
+  var BODY_MARKER = [
     { id: 'level', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 100, text: plain },
     { id: 'attack', name: 'ATTACK', where: 'OCT-K1', min: 0, max: 127, value: 0, text: function (v) { return ms(T.attack(v)); } },
     { id: 'acurve', name: 'ATK CURVE', where: 'OCT+K1', min: 0, max: 127, value: 100, text: plain },
@@ -751,18 +762,14 @@ function makeKickEngine(outRate) {
     { id: 'drive', name: 'DRIVE', where: 'K4', min: 0, max: 127, value: 30, text: plain },
     { id: 'type', name: 'DRIVE TYPE', where: 'OCT-ALGO', options: ['FOLD', 'CLIP', 'CRUSH'], value: 0 },
     { id: 'phase', name: 'PHASE', where: 'OCT-K3', min: 0, max: 127, value: 0, text: degrees },
-    { id: 'hpf', name: 'HPF', where: 'OCT+', options: ['OFF', 'ON'], value: 1 }
-  ];
-  var BODY_MARKER = [      /* the body's knobs that have a value at each marker of its MOD LEVEL */
+    { id: 'hpf', name: 'HPF', where: 'OCT+', options: ['OFF', 'ON'], value: 1 },
     { id: 'pitch', name: 'PITCH', where: 'SELECT', min: 0, max: 60, value: 24, text: function (v) { return NOTE[v % 12] + Math.floor(v / 12); } },
     { id: 'depth', name: 'DEPTH', where: 'OCT-K2', min: 0, max: 127, value: 56, text: function (v) { return ms(T.depth(v)); } },
     { id: 'sweep', name: 'SWEEP', where: 'K3', min: 0, max: 127, value: 36, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
     { id: 'curve', name: 'PITCH CURVE', where: 'OCT-K4', min: 0, max: 127, value: 96, text: plain }
   ];
-  var TEXTURE = [
-    { id: 'tex', name: 'LEVEL', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: plain }
-  ];
-  var TEXTURE_MARKER = [      /* the texture's knobs that have a value at each marker of its MOD LEVEL: all but LEVEL */
+  var TEXTURE_MARKER = [
+    { id: 'tex', name: 'LEVEL', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: plain },
     { id: 'tattack', name: 'ATTACK', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: function (v) { return ms(T.textureAttack(v)); } },
     { id: 'tdecay', name: 'DECAY', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 64, text: function (v) { return ms(T.textureDecay(v)); } },
     { id: 'tcurve', name: 'DCY CURVE', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: plain },
@@ -773,12 +780,10 @@ function makeKickEngine(outRate) {
     { id: 'tlow', name: 'LOW CUT', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 0, text: function (v) { return v ? Math.round(T.textureLow(v)) + ' Hz' : 'OFF'; } },
     { id: 'thigh', name: 'HIGH CUT', where: 'NOT ON FM-1 YET', min: 0, max: 127, value: 127, text: function (v) { return v < 127 ? Math.round(T.textureHigh(v)) + ' Hz' : 'OFF'; } }
   ];
-  var CLICK = [
+  var MARKER = [
     { id: 'click', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 71, text: plain },
     { id: 'mode', name: 'CLICK MODE', where: 'ALGO', options: ['MIX', 'FM', 'RING'], value: 0 },
-    { id: 'tone', name: 'TONE', where: 'OCT-K4', min: 0, max: 127, value: 80, text: function (v) { return Math.round(T.tone(v)) + ' Hz'; } }
-  ];
-  var MARKER = [      /* the click's knobs that have a value at each marker of MOD LEVEL */
+    { id: 'tone', name: 'TONE', where: 'OCT-K4', min: 0, max: 127, value: 80, text: function (v) { return Math.round(T.tone(v)) + ' Hz'; } },
     { id: 'tune', name: 'TUNE', where: 'K2', min: 0, max: 127, value: 48, text: function (v) { return Math.round(T.tune(v)) + ' Hz'; } },
     { id: 'snap', name: 'SNAP', where: 'K3', min: 0, max: 127, value: 64, text: function (v) { return ms(T.snap(v)); } },
     { id: 'bend', name: 'SWEEP', where: 'K4', min: 0, max: 127, value: 76, text: function (v) { return '+' + (v / 127 * 5).toFixed(1) + ' oct'; } },
@@ -786,10 +791,8 @@ function makeKickEngine(outRate) {
     { id: 'ccurve', name: 'PITCH CURVE', where: 'OCT+K1', min: 0, max: 127, value: 96, text: plain },
     { id: 'noise', name: 'NOISE', where: 'OCT-K1', min: 0, max: 127, value: 42, text: plain }
   ];
-  var RUMBLE = [
-    { id: 'rumble', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 55, text: plain }
-  ];
-  var RUMBLE_MARKER = [      /* the rumble's knobs that have a value at each marker of its MOD LEVEL: all but LEVEL. One with a list of values takes the nearest value between two markers */
+  var RUMBLE_MARKER = [
+    { id: 'rumble', name: 'LEVEL', where: 'K1', min: 0, max: 127, value: 55, text: plain },
     { id: 'rattack', name: 'ATTACK', where: 'OCT-K2', min: 0, max: 127, value: 81, text: function (v) { return ms(T.rumbleAttack(v)); } },
     { id: 'dark', name: 'DARK', where: 'K3', min: 0, max: 127, value: 50, text: function (v) { return Math.round(T.dark(v)) + ' Hz'; } },
     { id: 'grit', name: 'GRIT', where: 'K4', min: 0, max: 127, value: 50, text: plain },
@@ -883,16 +886,33 @@ function makeKickEngine(outRate) {
   });
   /* the picture's length: 1, 2 or 4 bars at the TEMPO, in seconds */
   function setSpan() { span = Number(document.getElementById('span').value) * 240 / (value.bpm || 120); }
-  function render() {
-    var count = Math.floor(span * RATE), core = makeCore(RATE), i;
+  /* one hit from silence, `count` samples of each wave. It uses nothing from the page: the picture's thread gets its text */
+  function kickShot(values, count, rate) {
+    var core = makeCore(rate), i;
     var made = { count: count, all: new Float32Array(count), body: new Float32Array(count), texture: new Float32Array(count), click: new Float32Array(count), rumble: new Float32Array(count), lfo: new Float32Array(count), hz: new Float32Array(count), hz2: new Float32Array(count) };
-    core.message({ set: copy() }); core.message({ hit: 1 });
+    core.message({ set: values }); core.message({ hit: 1 });
     for (i = 0; i < count; i++) {
       core.tick();
       made.all[i] = core.all; made.body[i] = core.body; made.texture[i] = core.texture; made.click[i] = core.click; made.rumble[i] = core.rumble; made.lfo[i] = core.lfo; made.hz[i] = core.hz; made.hz2[i] = core.hz2;
     }
-    shot = made;
+    return made;
   }
+  function render() { shot = kickShot(copy(), Math.floor(span * RATE), RATE); }
+  /* a bar of the kick takes longer to compute than one frame of the screen. So after the first picture a thread of its own computes it, and a knob that moves does not wait
+     for it: the picture follows, one request at a time, the latest values last. When the browser refuses the thread, the page computes the picture itself, as before */
+  var painter = null, painting = false, paintAgain = false;
+  function paintFailed(error) { console.warn('Kick Craft: the picture is computed in the page.', error && error.message); if (painter) painter.terminate(); painter = null; painting = false; shot = null; redraw(false); }
+  function paint() {
+    if (painting) { paintAgain = true; return; }
+    painting = true; paintAgain = false;
+    painter.postMessage({ set: copy(), count: Math.floor(span * RATE), rate: RATE });
+  }
+  try {
+    painter = new Worker(URL.createObjectURL(new Blob([String(kickTimes), '\n', String(makeCore), '\n', String(kickShot), '\n',
+      'onmessage = function (m) { var made = kickShot(m.data.set, m.data.count, m.data.rate), parts = []; for (var name in made) if (made[name].buffer) parts.push(made[name].buffer); postMessage(made, parts); };'], { type: 'text/javascript' })));
+    painter.onmessage = function (m) { shot = m.data; painting = false; if (paintAgain) paint(); redraw(false); };
+    painter.onerror = function (e) { e.preventDefault(); paintFailed(e); };
+  } catch (error) { paintFailed(error); }
   function nice(target) { var list = [0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]; for (var i = 0; i < list.length; i++) if (list[i] >= target) return list[i]; return 5; }
   function barText(bars) {      /* a place in the picture as a part of a bar: 1/16, 3/8, 1 BAR, 1 1/2 */
     var den = 4096, num = Math.round(bars * den), a = num, b = den, whole;
@@ -972,7 +992,7 @@ function makeKickEngine(outRate) {
     if (now.pitch) { sc.fillStyle = AMBER; sc.textAlign = 'right'; [64, 256, 1024].forEach(function (v) { sc.fillText(v + ' Hz', w - 6 * f.ratio, pitchY(v)); }); }
     describe();
   }
-  function redraw(again) { if (again) shot = null; if (!drawDue) { drawDue = true; requestAnimationFrame(draw); } }
+  function redraw(again) { if (again) { if (painter && shot) paint(); else shot = null; } if (!drawDue) { drawDue = true; requestAnimationFrame(draw); } }
   function fit() {
     var ratio = window.devicePixelRatio || 1, w = Math.max(1, Math.round(scope.clientWidth * ratio)), h = Math.max(1, Math.round(scope.clientHeight * ratio));
     if (scope.width !== w || scope.height !== h) { scope.width = cursor.width = w; scope.height = cursor.height = h; redraw(false); }
@@ -1065,7 +1085,9 @@ function makeKickEngine(outRate) {
     function words(layer, list) { return list.map(function (k) { return (k.name.indexOf(layer) ? layer + ' ' : '') + k.name + ' ' + (k.options ? k.options[value[k.id]] : k.text(value[k.id])); }).join(', '); }
     status.textContent = 'The picture shows the first ' + timeText(span) + '. The wave is highest, ' + peak.toFixed(2) + ' of full level, at ' + (peakAt / RATE * 1000).toFixed(1) + ' ms' +
       (quiet < shot.count - 1 ? ', and is below 1 % after ' + Math.round((quiet + 1) / RATE * 1000) + ' ms. ' : ', and is still above 1 % at the end of the picture. ') +
-      words('BODY', KICK) + ', BODY ' + mod('b') + ', ' + words('BODY', BODY_MARKER) + ', ' + words('TEXTURE', TEXTURE) + ', TEXTURE ' + mod('t') + ', ' + words('TEXTURE', TEXTURE_MARKER) + ', ' + words('CLICK', CLICK) + ', CLICK ' + mod('c') + ', ' + words('CLICK', MARKER) + ', ' + words('RUMBLE', RUMBLE) + ', RUMBLE ' + mod('r') + ', ' + words('RUMBLE', RUMBLE_MARKER) +
+      [['CLICK', 'c', MARKER], ['BODY', 'b', BODY_MARKER], ['TEXTURE', 't', TEXTURE_MARKER], ['RUMBLE', 'r', RUMBLE_MARKER]].map(function (layer) {
+        return layer[0] + ' VOLUME ' + value[layer[1] + 'vol'] + ', ' + layer[0] + ' ' + mod(layer[1]) + ', ' + words(layer[0], layer[2]);
+      }).join(', ') +
       '. The sequencer: ' + document.getElementById('pattern-text').textContent.slice(5, -1) + ', DIVISION ' + SEQ[1].options[value.div] + ', at ' + value.bpm + ' BPM.';
   }
 
@@ -1098,16 +1120,37 @@ function makeKickEngine(outRate) {
       controls[k.id] = { input: input, show: show, low: k.options ? 0 : k.min, high: k.options ? k.options.length - 1 : k.max, first: k.value };
     });
   }
-  build(document.getElementById('kick'), KICK);
-  build(document.getElementById('texture'), TEXTURE);
-  build(document.getElementById('click'), CLICK);
-  build(document.getElementById('rumble'), RUMBLE);
   build(document.getElementById('seq-knobs'), SEQ);
   value.pat = evenPattern();      /* the steps have their buttons: no knob from build() */
   controls.pat = { input: {}, show: function () {}, low: 0, high: 4294967295, first: value.pat };
 
   /* ---- MOD LEVEL, one for each layer (`g` is 'b', 't', 'c' or 'r'): each knob of `list` has a value at each of 5 markers (tune1 .. tune5, ...), shown above
      the slider; the knobs in the box show the marker where MOD LEVEL is, or the mix between two markers. The slider is bmod, tmod, cmod or rmod, the number of markers less 2 is bpts, tpts, cpts or rpts. The rotary knob below the picture is the same value as the slider ---- */
+  /* a rotary knob below the picture, 0 .. `high`: up is more, 150 px of travel for the full range; the arrow keys move it by 1, Page Up and Page Down by `page`.
+     `turn` gets the value asked for; the function that comes back shows a value */
+  function makeDial(dial, high, page, turn) {
+    var dragY = 0, dragFrom = 0, shown = 0;
+    dial.addEventListener('pointerdown', function (e) { e.preventDefault(); dial.focus(); dial.setPointerCapture(e.pointerId); dragY = e.clientY; dragFrom = shown; });
+    dial.addEventListener('pointermove', function (e) { if (dial.hasPointerCapture(e.pointerId)) turn(dragFrom + (dragY - e.clientY) * high / 150); });
+    dial.addEventListener('keydown', function (e) {
+      var by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: page, PageDown: -page, Home: -high, End: high }[e.key];
+      if (by) { e.preventDefault(); turn(shown + by); }
+    });
+    return function (v, text, off) {
+      shown = v; dial.setAttribute('aria-valuenow', v); dial.setAttribute('aria-valuetext', text); dial.setAttribute('aria-disabled', String(off));
+      dial.style.setProperty('--turn', v / high * 270 - 135 + 'deg');      /* from 7 o'clock to 5 o'clock */
+    };
+  }
+  /* VOLUME, one for each layer: not a knob of a marker, so MOD LEVEL does not move it */
+  ['c', 'b', 't', 'r'].forEach(function (g) {
+    var id = g + 'vol', show = makeDial(document.getElementById('dial-' + id), 127, 16, function (v) {
+      value[id] = Math.max(0, Math.min(127, Math.round(v))); controls[id].show();
+      var one = {}; one[id] = value[id]; send({ set: one }); redraw(true);
+    });
+    value[id] = 127;
+    controls[id] = { input: {}, show: function () { show(value[id], String(value[id]), false); }, low: 0, high: 127, first: 127 };
+    controls[id].show();
+  });
   var MORPHS = [];
   function setKnob(id, v) { value[id] = v; controls[id].input.value = v; controls[id].show(); }
   function markerKnob(id) {      /* true for a knob of a marker: its value goes to the marker where its MOD LEVEL is, and the engine gets all the values */
@@ -1116,13 +1159,14 @@ function makeKickEngine(outRate) {
   function makeMorph(g, list) {
     var MOD = g + 'mod', PTS = g + 'pts', knobs = list.map(function (k) { return k.id; }), part = function (name) { return document.getElementById(g + '-' + name); };
     var modInput = document.getElementById('in-' + MOD), modShown = part('shown'), whereText = part('where');
-    var removeButton = part('remove'), confirmBox = part('confirm'), strip = part('marks'), marks = [], dial = document.getElementById('dial-' + g), dragY = 0, dragFrom = 0;
+    var removeButton = part('remove'), confirmBox = part('confirm'), strip = part('marks'), marks = [];
     build(part('knobs'), list);
     value[MOD] = 0; value[PTS] = -1;      /* MOD LEVEL has its own slider, and the markers change their number: no knob from build() */
     controls[MOD] = { input: modInput, show: function () {}, low: 0, high: 120, first: 0 };
     controls[PTS] = { input: {}, show: function () {}, low: -1, high: 3, first: -1 };
     function markAt(n) { return value[PTS] < 0 ? 0 : n * 120 / (value[PTS] + 1); }      /* a marker's place on MOD LEVEL: the markers share its travel in equal parts */
     function markNow() { for (var n = 0; n <= value[PTS] + 1; n++) if (markAt(n) === value[MOD]) return n; return -1; }
+    var showDial = makeDial(document.getElementById('dial-' + g), 120, 12, function (v) { if (value[PTS] >= 0) { value[MOD] = Math.max(0, Math.min(120, Math.round(v))); morphChanged(); } });
     function showMorph() {
       if (value[PTS] < 0) value[MOD] = 0;      /* one marker: MOD LEVEL stays on it, and its slider is off */
       var now = markNow(), count = value[PTS] + 2, low = Math.min(count - 2, Math.floor(value[MOD] / 120 * (count - 1))), percent = Math.round(value[MOD] / 120 * 100) + ' %';
@@ -1136,8 +1180,7 @@ function makeKickEngine(outRate) {
       strip.classList.toggle('open', count < 5);
       var place = percent + (now >= 0 ? ', marker ' + (now + 1) : ', between marker ' + (low + 1) + ' and marker ' + (low + 2));
       modInput.value = value[MOD]; modShown.textContent = percent; modInput.setAttribute('aria-valuetext', place);
-      dial.setAttribute('aria-valuenow', value[MOD]); dial.setAttribute('aria-valuetext', place); dial.setAttribute('aria-disabled', String(count < 2));
-      dial.style.setProperty('--turn', value[MOD] / 120 * 270 - 135 + 'deg');      /* from 7 o'clock to 5 o'clock */
+      showDial(value[MOD], place, count < 2);
     }
     function morphChanged() { showMorph(); send({ set: copy() }); redraw(true); }
     for (var marker = 1; marker <= 5; marker++) {
@@ -1150,14 +1193,6 @@ function makeKickEngine(outRate) {
       })(marker - 1);
     }
     modInput.addEventListener('input', function () { value[MOD] = Number(modInput.value); morphChanged(); });
-    /* the rotary knob: up is more. 150 px of travel for the full range; the arrow keys move it by 1, Page Up and Page Down by 12 */
-    function turnTo(v) { if (value[PTS] >= 0) { value[MOD] = Math.max(0, Math.min(120, Math.round(v))); morphChanged(); } }
-    dial.addEventListener('pointerdown', function (e) { e.preventDefault(); dial.focus(); dial.setPointerCapture(e.pointerId); dragY = e.clientY; dragFrom = value[MOD]; });
-    dial.addEventListener('pointermove', function (e) { if (dial.hasPointerCapture(e.pointerId)) turnTo(dragFrom + (dragY - e.clientY) * 0.8); });
-    dial.addEventListener('keydown', function (e) {
-      var by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 12, PageDown: -12, Home: -120, End: 120 }[e.key];
-      if (by) { e.preventDefault(); turnTo(value[MOD] + by); }
-    });
     /* a new marker at `place` of MOD LEVEL's travel, 0 .. 1: it takes the mix of that place, goes between its two neighbours, and all the markers take equal places */
     function addMarker(place) {
       var count = value[PTS] + 2, at, low, mix = {}, n;

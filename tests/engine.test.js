@@ -25,7 +25,7 @@ const allFinite = (wave) => wave.every(Number.isFinite);
 /* every click mode and drive type, at both ends of the knobs, through the output filter: no bad value, no overload */
 for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0, 127]) {
   const out = new Float32Array(48000), kick = makeKickEngine(48000);
-  kick.message({ set: { mode, type, attack: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack1: end, drive: end, rphase1: end, sweep1: end, sweep2: 127 - end, depth2: end, curve2: end, bmod: end ? 120 : 50, bpts: end ? 3 : 0, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch1: end ? 60 : 0, pitch2: end ? 0 : 60, delay1: end, dfbk1: end, llevel1: end, ldark1: end, lper1: end ? 13 : 0, lphase1: end, tex: 127, tattack1: end, tdecay1: end, tcurve1: end, topen1: end, tnoise1: end, trev1: end, tsize1: end, tlow1: end, thigh1: end, bpm: 200 }, run: true });
+  kick.message({ set: { mode1: mode, type1: type, attack1: end, cattack1: end, cattack2: 127 - end, noise2: end, ccurve2: end, rattack1: end, drive1: end, rphase1: end, sweep1: end, sweep2: 127 - end, depth2: end, curve2: end, bmod: end ? 120 : 50, bpts: end ? 3 : 0, bend1: end, bend2: 127 - end, snap2: end, tune2: end, cmod: end ? 120 : 50, cpts: end ? 3 : 0, pitch1: end ? 60 : 0, pitch2: end ? 0 : 60, delay1: end, dfbk1: end, llevel1: end, ldark1: end, lper1: end ? 13 : 0, lphase1: end, tex1: 127, tattack1: end, tdecay1: end, tcurve1: end, topen1: end, tnoise1: end, trev1: end, tsize1: end, tlow1: end, thigh1: end, bpm: 200 }, run: true });
   kick.process(out);
   assert.ok(allFinite(out), `mode ${mode}, type ${type}, knobs at ${end}: a value is not a number`);
   assert.ok(peak(out) <= 1, `mode ${mode}, type ${type}, knobs at ${end}: the output is above full level`);
@@ -33,7 +33,7 @@ for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0
 
 /* the three levels do not move each other */
 {
-  const full = hit({}, 1), noBody = hit({ level: 0 }, 1), noClick = hit({ click: 0 }, 1), noRumble = hit({ rumble: 0 }, 1);
+  const full = hit({}, 1), noBody = hit({ level1: 0 }, 1), noClick = hit({ click1: 0 }, 1), noRumble = hit({ rumble1: 0 }, 1);
   assert.strictEqual(peak(noBody.body), 0, 'the body is silent at LEVEL 0');
   assert.strictEqual(peak(noBody.click), peak(full.click), 'the click does not change with the body at 0');
   assert.strictEqual(peak(noBody.rumble), peak(full.rumble), 'the rumble does not change with the body at 0');
@@ -46,7 +46,7 @@ for (const mode of [0, 1, 2]) for (const type of [0, 1, 2]) for (const end of [0
 /* the body's ATTACK cuts only the start: after the attack time the wave is the wave with no attack (low cut off) */
 {
   const attackSeconds = 0.001 * Math.pow(2, 90 / 127 * 8.64), from = Math.ceil(attackSeconds * RATE) + 1;
-  const plain = hit({ attack: 0, hpf: 0, click: 0, rumble: 0 }, 0.5).body, cut = hit({ attack: 90, hpf: 0, click: 0, rumble: 0 }, 0.5).body;
+  const plain = hit({ attack1: 0, hpf1: 0, click1: 0, rumble1: 0 }, 0.5).body, cut = hit({ attack1: 90, hpf1: 0, click1: 0, rumble1: 0 }, 0.5).body;
   for (let i = from; i < plain.length; i++) assert.strictEqual(cut[i], plain[i], `the wave differs after the attack, at sample ${i}`);
   assert.ok(Math.abs(cut[Math.floor(from / 4)]) < 0.05, 'the body is low in the first quarter of the attack');
 }
@@ -81,7 +81,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 
 /* the texture is the body's second output: its LEVEL moves no other layer, and the body's LEVEL does not move it */
 {
-  const full = hit({}, 1), noTexture = hit({ tex: 0 }, 1), noBody = hit({ level: 0 }, 1);
+  const full = hit({}, 1), noTexture = hit({ tex1: 0 }, 1), noBody = hit({ level1: 0 }, 1);
   assert.ok(peak(full.texture) > 0.05, 'the texture is silent');
   assert.strictEqual(peak(noTexture.texture), 0, 'the texture is silent at LEVEL 0');
   for (const name of ['body', 'click', 'rumble']) assert.deepStrictEqual(noTexture[name], full[name], `the ${name} changed with the texture at 0`);
@@ -93,7 +93,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 {
   const end = (wave) => { const top = peak(wave); let last = 0; wave.forEach((v, i) => { if (Math.abs(v) > top / 100) last = i; }); return last / RATE; };
   const bright = (wave) => { let moves = 0, size = 0; for (let i = 1; i < wave.length; i++) { moves += (wave[i] - wave[i - 1]) ** 2; size += wave[i] ** 2; } return moves / size; };
-  const dry = { trev1: 0, decay: 127 };      /* a long body, so the gate ends the texture and not the body */
+  const dry = { trev1: 0, decay1: 127 };      /* a long body, so the gate ends the texture and not the body */
   const short = hit({ ...dry, tdecay1: 20 }, 2).texture, long = hit({ ...dry, tdecay1: 110 }, 2).texture;
   assert.ok(end(short) < 0.1, 'a short DECAY does not close the gate');
   assert.ok(end(long) > 3 * end(short), 'DECAY does not change the length of the texture');
@@ -105,7 +105,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 
 /* the gate's DCY CURVE: at 0 the gate falls fast at the start, at 127 it stays open and falls at the end; at each curve the texture is closed after DECAY */
 {
-  const dry = { trev1: 0, decay: 127, tdecay1: 80, tnoise1: 127 }, seconds = 0.02 * Math.pow(2, 80 / 127 * 6.64);
+  const dry = { trev1: 0, decay1: 127, tdecay1: 80, tnoise1: 127 }, seconds = 0.02 * Math.pow(2, 80 / 127 * 6.64);
   const level = (wave, from, to) => Math.sqrt(wave.subarray(Math.floor(from * seconds * RATE), Math.floor(to * seconds * RATE)).reduce((sum, v) => sum + v * v, 0));
   const fast = hit({ ...dry, tcurve1: 0 }, seconds * 1.5).texture, line = hit({ ...dry, tcurve1: 42 }, seconds * 1.5).texture, held = hit({ ...dry, tcurve1: 127 }, seconds * 1.5).texture;
   assert.ok(level(line, 0.5, 0.8) > 3 * level(fast, 0.5, 0.8), 'DCY CURVE at 42 is not slower than at 0');
@@ -116,7 +116,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 /* the texture's reverb1: REVERB at 0 leaves no tail after the gate, and SIZE is the length of the tail */
 {
   const tail = (wave) => Math.sqrt(wave.subarray(Math.floor(0.6 * RATE), Math.floor(0.9 * RATE)).reduce((sum, v) => sum + v * v, 0));
-  const gate = { tdecay1: 20, decay: 20 };
+  const gate = { tdecay1: 20, decay1: 20 };
   assert.ok(tail(hit({ ...gate, trev1: 0 }, 1).texture) < 1e-6, 'the texture goes on with REVERB at 0');
   assert.ok(tail(hit({ ...gate, trev1: 127, tsize1: 127 }, 1).texture) > 100 * tail(hit({ ...gate, trev1: 127, tsize1: 20 }, 1).texture), 'SIZE does not change the length of the tail');
 }
@@ -125,7 +125,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 {
   const size = (wave) => Math.sqrt(wave.reduce((sum, v) => sum + v * v, 0));
   const moves = (wave) => { let total = 0; for (let i = 1; i < wave.length; i++) total += (wave[i] - wave[i - 1]) ** 2; return Math.sqrt(total); };
-  const lows = { tnoise1: 0, drive: 0, topen1: 127 }, highs = { tnoise1: 127, topen1: 127, level: 0 };      /* a texture of the body's sine only; a texture with much noise */
+  const lows = { tnoise1: 0, drive1: 0, topen1: 127 }, highs = { tnoise1: 127, topen1: 127, level1: 0 };      /* a texture of the body's sine only; a texture with much noise */
   assert.ok(size(hit({ ...lows, tlow1: 127 }, 0.5).texture) < 0.05 * size(hit({ ...lows, tlow1: 0 }, 0.5).texture), 'LOW CUT leaves the lows');
   assert.ok(moves(hit({ ...highs, thigh1: 0 }, 0.5).texture) < 0.05 * moves(hit({ ...highs, thigh1: 127 }, 0.5).texture), 'HIGH CUT leaves the highs');
   assert.ok(moves(hit({ ...highs, tlow1: 127 }, 0.5).texture) > 0.5 * moves(hit({ ...highs, tlow1: 0 }, 0.5).texture), 'LOW CUT takes the highs out too');
@@ -144,7 +144,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 
 /* the click's MOD LEVEL morphs SNAP, TUNE and SWEEP between 2 to 5 markers: a marker's place gives that marker, and between two markers the knobs' values are mixed */
 {
-  const click = (values) => hit({ rumble: 0, tex: 0, cpts: 0, ...values }, 0.2).click;      /* 2 markers, when the test does not give another number */
+  const click = (values) => hit({ rumble1: 0, tex1: 0, cpts: 0, ...values }, 0.2).click;      /* 2 markers, when the test does not give another number */
   const one = { tune1: 10, snap1: 20, bend1: 30 }, two = { tune2: 110, snap2: 90, bend2: 100 }, three = { tune3: 60, snap3: 127, bend3: 0 };
   const as1 = (marker, n) => Object.fromEntries(Object.entries(marker).map(([name, v]) => [name.replace(String(n), '1'), v]));      /* a marker's values, put at marker 1 */
   assert.deepStrictEqual(click({ ...one, ...two, cmod: 0 }), click(one), 'MOD LEVEL at 0 is not marker 1');
@@ -164,7 +164,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
 
 /* the body's MOD LEVEL morphs PITCH, DEPTH, SWEEP and PITCH CURVE between 2 to 5 markers, as the click's does, and the two MOD LEVELs do not move each other */
 {
-  const shot = (values) => hit({ rumble: 0, tex: 0, bpts: 0, ...values }, 0.2), body = (values) => shot(values).body;      /* 2 markers, when the test does not give another number */
+  const shot = (values) => hit({ rumble1: 0, tex1: 0, bpts: 0, ...values }, 0.2), body = (values) => shot(values).body;      /* 2 markers, when the test does not give another number */
   const one = { pitch1: 12, depth1: 20, sweep1: 30, curve1: 10 }, two = { pitch2: 36, depth2: 100, sweep2: 90, curve2: 120 }, three = { pitch3: 5, depth3: 127, sweep3: 0, curve3: 60 };
   const as1 = (marker, n) => Object.fromEntries(Object.entries(marker).map(([name, v]) => [name.replace(String(n), '1'), v]));      /* a marker's values, put at marker 1 */
   assert.notDeepStrictEqual(body(one), body(as1(two, 2)), 'the body\'s markers do not change the body');
@@ -174,7 +174,7 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.deepStrictEqual(body({ ...one, ...two, ...three, bpts: 1, bmod: 120 }), body(as1(three, 3)), 'the body\'s MOD LEVEL at its top is not the last of 3 markers');
   assert.deepStrictEqual(body({ ...one, ...two, bmod: 60 }), body({ pitch1: 24, depth1: 60, sweep1: 60, curve1: 65 }), 'the body\'s MOD LEVEL between two markers does not mix their values');
   assert.deepStrictEqual(body({ ...one, ...two, bpts: -1, bmod: 90 }), body(one), 'with one marker the body is not marker 1 at each MOD LEVEL');
-  assert.deepStrictEqual(hit({ rumble: 0, tex: 0, ...one, ...two, bmod: 90 }, 0.2).body, body(one), 'a kick with no number of body markers does not have one marker');
+  assert.deepStrictEqual(hit({ rumble1: 0, tex1: 0, ...one, ...two, bmod: 90 }, 0.2).body, body(one), 'a kick with no number of body markers does not have one marker');
   assert.deepStrictEqual(shot({ ...one, ...two, bmod: 90 }).click, shot(one).click, 'the body\'s MOD LEVEL moves the click');
   assert.deepStrictEqual(shot({ tune2: 100, cpts: 0, cmod: 90 }).body, shot({}).body, 'the click\'s MOD LEVEL moves the body');
   const hz = (values) => { const core = makeCore(RATE); core.message({ set: { sweep1: 0, sweep2: 0, bpts: 0, ...values } }); core.message({ hit: 1 }); core.tick(); return core.hz; };
@@ -209,11 +209,37 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
   assert.deepStrictEqual(shot({ rlen1: 1, rlen2: 4, rmod: 50 }).rumble, shot({ rlen1: 2 }).rumble, 'LENGTH between two markers is not the nearest length');
 }
 
+/* every knob of a layer is in its markers: the LEVEL and the knobs with a list of values too */
+{
+  const shot = (values) => hit({ bpts: 0, cpts: 0, tpts: 0, rpts: 0, ...values }, 0.3);
+  assert.deepStrictEqual(shot({ level1: 20, level2: 100, bmod: 60 }).body, shot({ level1: 60 }).body, 'the body\'s LEVEL is not mixed between two markers');
+  assert.deepStrictEqual(shot({ decay1: 20, decay2: 100, drive1: 0, drive2: 100, attack1: 0, attack2: 60, bmod: 120 }).body, shot({ decay1: 100, drive1: 100, attack1: 60 }).body, 'the body\'s DECAY, DRIVE and ATTACK are not in its markers');
+  assert.deepStrictEqual(shot({ type1: 0, type2: 2, bmod: 50 }).body, shot({ type1: 1 }).body, 'DRIVE TYPE between two markers is not the nearest type');
+  assert.deepStrictEqual(shot({ click1: 20, click2: 100, cmod: 60 }).click, shot({ click1: 60 }).click, 'the click\'s LEVEL is not mixed between two markers');
+  assert.deepStrictEqual(shot({ mode1: 0, mode2: 2, tone1: 20, tone2: 100, cmod: 120 }).all, shot({ mode1: 2, tone1: 100 }).all, 'CLICK MODE and TONE are not in the click\'s markers');
+  assert.deepStrictEqual(shot({ tex1: 20, tex2: 100, tmod: 60 }).texture, shot({ tex1: 60 }).texture, 'the texture\'s LEVEL is not mixed between two markers');
+  assert.deepStrictEqual(shot({ rumble1: 20, rumble2: 100, rmod: 60 }).rumble, shot({ rumble1: 60 }).rumble, 'the rumble\'s LEVEL is not mixed between two markers');
+}
+
+/* VOLUME, one for each layer, is the last thing before the mix: at 0 the layer is silent, no other layer moves, and it is not the layer's LEVEL */
+{
+  const full = hit({}, 0.5), layers = { body: 'bvol', texture: 'tvol', click: 'cvol', rumble: 'rvol' };
+  for (const layer in layers) {
+    const none = hit({ [layers[layer]]: 0 }, 0.5), half = hit({ [layers[layer]]: 64 }, 0.5);
+    assert.strictEqual(peak(none[layer]), 0, `the ${layer} is not silent at VOLUME 0`);
+    assert.ok(peak(half[layer]) > 0.2 * peak(full[layer]) && peak(half[layer]) < peak(full[layer]), `the ${layer}'s VOLUME at the middle is not between silence and full`);
+    for (const other in layers) if (other !== layer) assert.deepStrictEqual(none[other], full[other], `the ${layer}'s VOLUME moves the ${other}`);
+    assert.notDeepStrictEqual(none.all, full.all, `the ${layer}'s VOLUME does not change the mix`);
+  }
+  assert.deepStrictEqual(hit({ bvol: 127, tvol: 127, cvol: 127, rvol: 127 }, 0.5).all, full.all, 'a kick with no VOLUME is not at full volume');
+  assert.deepStrictEqual(hit({ mode1: 1, cvol: 0 }, 0.5).body, hit({ mode1: 1 }, 0.5).body, 'in FM the click\'s VOLUME changes how much the click bends the body');
+}
+
 /* the sequencer: each step that is on in `pat` (step 1 is its lowest bit) hits the kick, over STEPS steps, and DIVISION is the number of steps in a bar */
 {
   const played = (values, seconds) => {      /* the steps that hit, in order */
     const core = makeCore(RATE), steps = []; let hits = 0;
-    core.message({ set: { rumble: 0, tex: 0, bpm: 120, ...values }, run: true });
+    core.message({ set: { rumble1: 0, tex1: 0, bpm: 120, ...values }, run: true });
     for (let i = 0; i < RATE * seconds; i++) { core.tick(); if (core.hits !== hits) { hits = core.hits; steps.push(core.step); } }
     return steps;
   };
