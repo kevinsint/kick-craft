@@ -107,10 +107,10 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .track input[type="range"]:disabled { accent-color: var(--dev-edge); }
 .track input[type="range"] { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--lit); }
 .mark { position: absolute; top: 0; transform: translateX(-50%); min-width: 44px; min-height: 44px; padding: 0 var(--s1); font: 600 1rem var(--mono);
-  background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; cursor: pointer; }
+  background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; cursor: pointer; touch-action: pan-y; }
 .mark::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 12px; margin-left: -1px; background: var(--dev-edge); }
 .mark[aria-pressed="true"] { background: var(--lit); border-color: var(--lit); color: #15191d; }
-.mark[aria-pressed="true"]::before { content: "\25CF\00A0" / ""; }
+.mark[aria-pressed="true"]::before { content: "\25CF"; content: "\25CF" / ""; }      /* the first one for a browser that does not know the second */
 .mark[aria-pressed="true"]::after { background: var(--lit); }
 .drawer { display: grid; gap: var(--s1); border: 2px solid var(--dev-edge); border-top-width: 6px; border-radius: 0 0 6px 6px; padding: var(--s1) var(--s2) var(--s2); }
 .knob input[type="range"]:disabled { accent-color: var(--dev-edge); }
@@ -151,7 +151,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 55</p>
+      <p class="version">Draft 56</p>
     </div>
     <div class="device">
       <div class="row">
@@ -215,8 +215,11 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             </div>
             <div class="drawer">
               <p class="hint" id="c-where"></p>
+              <p class="hidden-text" id="c-moved" role="status"></p>
               <div class="knobs" id="c-knobs"></div>
               <div class="row">
+                <button class="btn" id="c-left" type="button">Move Left</button>
+                <button class="btn" id="c-right" type="button">Move Right</button>
                 <button class="btn danger" id="c-remove" type="button">Remove Marker…</button>
                 <span class="row" id="c-confirm" hidden>
                   <button class="btn danger" id="c-yes" type="button">Remove Marker</button>
@@ -239,8 +242,11 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             </div>
             <div class="drawer">
               <p class="hint" id="b-where"></p>
+              <p class="hidden-text" id="b-moved" role="status"></p>
               <div class="knobs" id="b-knobs"></div>
               <div class="row">
+                <button class="btn" id="b-left" type="button">Move Left</button>
+                <button class="btn" id="b-right" type="button">Move Right</button>
                 <button class="btn danger" id="b-remove" type="button">Remove Marker…</button>
                 <span class="row" id="b-confirm" hidden>
                   <button class="btn danger" id="b-yes" type="button">Remove Marker</button>
@@ -263,8 +269,11 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             </div>
             <div class="drawer">
               <p class="hint" id="t-where"></p>
+              <p class="hidden-text" id="t-moved" role="status"></p>
               <div class="knobs" id="t-knobs"></div>
               <div class="row">
+                <button class="btn" id="t-left" type="button">Move Left</button>
+                <button class="btn" id="t-right" type="button">Move Right</button>
                 <button class="btn danger" id="t-remove" type="button">Remove Marker…</button>
                 <span class="row" id="t-confirm" hidden>
                   <button class="btn danger" id="t-yes" type="button">Remove Marker</button>
@@ -287,8 +296,11 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
             </div>
             <div class="drawer">
               <p class="hint" id="r-where"></p>
+              <p class="hidden-text" id="r-moved" role="status"></p>
               <div class="knobs" id="r-knobs"></div>
               <div class="row">
+                <button class="btn" id="r-left" type="button">Move Left</button>
+                <button class="btn" id="r-right" type="button">Move Right</button>
                 <button class="btn danger" id="r-remove" type="button">Remove Marker…</button>
                 <span class="row" id="r-confirm" hidden>
                   <button class="btn danger" id="r-yes" type="button">Remove Marker</button>
@@ -457,7 +469,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
     <div class="choice"><strong>The wave and the curves are mine.</strong><span>The manual does not give them. I use a sine and curves that fall fast, then slowly, which is the common way to make this kind of kick. The ranges in the table above are a first estimate, to tune by ear on this page.</span></div>
     <div class="choice"><strong>The drive is after the level envelope.</strong><span>The manual does not say where it is. After the envelope, the drive acts as a compressor on the start of the hit, which is what the manual describes.</span></div>
     <div class="choice"><strong>The click is a second, short kick.</strong><span>It is the part that a kick module makes with the pitch envelope, taken out into an oscillator of its own. So the body can stay low and round (a small SWEEP), and you set the click where it cuts through: its note, its sweep, its attack, its length. In FM and RING it gives the body a hard start for the SNAP time.</span></div>
-    <div class="choice"><strong>MOD LEVEL is one slider for six knobs.</strong><span>TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each marker. The markers are above the slider, 1 to 5 of them (with one marker the slider is off, and the knobs in the box are the click’s), and they share its travel in equal parts: with 3 markers, marker 2 is at the middle. Select a marker: MOD LEVEL goes to that marker, and the knobs in the box below show its values and change them. Between two markers the box shows the mix of the two markers, and the knobs do not move. Click above the slider between two markers: a new marker goes there with the mix of that place, and all the markers take equal places again. Remove Marker takes the selected marker out, after a confirmation. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before MOD LEVEL. On the FM-1, an LFO of the bank can move MOD LEVEL; it has no knob there yet.</span></div>
+    <div class="choice"><strong>MOD LEVEL is one slider for six knobs.</strong><span>TUNE, SNAP, SWEEP, ATTACK, PITCH CURVE and NOISE have a value at each marker. The markers are above the slider, 1 to 5 of them (with one marker the slider is off, and the knobs in the box are the click’s), and they share its travel in equal parts: with 3 markers, marker 2 is at the middle. Select a marker: MOD LEVEL goes to that marker, and the knobs in the box below show its values and change them. Between two markers the box shows the mix of the two markers, and the knobs do not move. Click above the slider between two markers: a new marker goes there with the mix of that place, and all the markers take equal places again. Drag a marker along the slider, or use Move Left and Move Right: the marker goes to its new place with its values, and the order of the markers changes. Remove Marker takes the selected marker out, after a confirmation. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before MOD LEVEL. On the FM-1, an LFO of the bank can move MOD LEVEL; it has no knob there yet.</span></div>
     <div class="choice"><strong>The body has a MOD LEVEL too.</strong><span>PITCH, DEPTH, SWEEP and PITCH CURVE have a value at each marker, with the same slider and the same markers as the click’s. The two MOD LEVELs are apart: one does not move the other. Between two markers the PITCH is between two notes. A preset keeps the 5 markers. A new kick has one marker, and so has a preset saved before the body’s MOD LEVEL. On the FM-1, an LFO of the bank can move it; it has no knob there yet.</span></div>
     <div class="choice"><strong>Each knob of a layer is in its MOD LEVEL.</strong><span>The four layers have a MOD LEVEL, and each knob of a layer has a value at each marker, its LEVEL too. A knob with a list of values, as DRIVE TYPE, CLICK MODE, LENGTH or LFO SHAPE, takes the nearest value of its list between two markers. A preset saved before this has the same value at each marker.</span></div>
     <div class="choice"><strong>Two rows of rotary knobs below the picture.</strong><span>A column for each layer, in view with each tab. MOD LEVEL is the same value as the slider in the layer’s tab: move one and the other moves. With one marker it is off, as the slider is. VOLUME is the layer’s last gain before the mix, from silence to full. It is not the layer’s LEVEL: no marker keeps it, MOD LEVEL does not move it, and it changes nothing that the layer feeds. With the body’s VOLUME at 0, the body still feeds the texture and the rumble. In FM and RING the click is inside the body, so the click’s VOLUME moves only its noise. Drag a knob up for more and down for less, or use the arrow keys.</span></div>
@@ -1159,7 +1171,7 @@ function makeKickEngine(outRate) {
   function makeMorph(g, list) {
     var MOD = g + 'mod', PTS = g + 'pts', knobs = list.map(function (k) { return k.id; }), part = function (name) { return document.getElementById(g + '-' + name); };
     var modInput = document.getElementById('in-' + MOD), modShown = part('shown'), whereText = part('where');
-    var removeButton = part('remove'), confirmBox = part('confirm'), strip = part('marks'), marks = [];
+    var removeButton = part('remove'), confirmBox = part('confirm'), strip = part('marks'), marks = [], dragEnd = -1000;      /* `dragEnd`: when a drag of a marker ended, so the click that comes after it does nothing */
     build(part('knobs'), list);
     value[MOD] = 0; value[PTS] = -1;      /* MOD LEVEL has its own slider, and the markers change their number: no knob from build() */
     controls[MOD] = { input: modInput, show: function () {}, low: 0, high: 120, first: 0 };
@@ -1171,11 +1183,12 @@ function makeKickEngine(outRate) {
       if (value[PTS] < 0) value[MOD] = 0;      /* one marker: MOD LEVEL stays on it, and its slider is off */
       var now = markNow(), count = value[PTS] + 2, low = Math.min(count - 2, Math.floor(value[MOD] / 120 * (count - 1))), percent = Math.round(value[MOD] / 120 * 100) + ' %';
       knobs.forEach(function (id) { setKnob(id, now >= 0 ? value[id + (now + 1)] : Math.round(T.morph(value, id, g))); controls[id].input.disabled = now < 0; });
-      whereText.textContent = now >= 0 ? 'Marker ' + (now + 1) + ' of ' + count + '. The knobs below change this marker.' + (count < 2 ? ' Click above the slider to add a marker.' : '')
+      whereText.textContent = now >= 0 ? 'Marker ' + (now + 1) + ' of ' + count + '. The knobs below change this marker.' + (count < 2 ? ' Click above the slider to add a marker.' : ' Drag it, or use Move Left and Move Right, to change the order.')
         : 'Between marker ' + (low + 1) + ' and marker ' + (low + 2) + ': a mix of the two.' + (count < 5 ? ' Click above the slider to keep these values as a new marker.' : '');
       marks.forEach(function (mark, n) {      /* the slider's thumb stops 8 px from each end of its track: the markers do the same */
         mark.hidden = n >= count; mark.style.left = 'calc(30px + ' + (count > 1 ? Math.min(1, n / (count - 1)) : 0) + ' * (100% - 60px))'; mark.setAttribute('aria-pressed', String(n === now));
       });
+      part('left').disabled = now <= 0; part('right').disabled = now < 0 || now >= count - 1;
       removeButton.disabled = count < 2 || now < 0; modInput.disabled = count < 2; confirmBox.hidden = true;
       strip.classList.toggle('open', count < 5);
       var place = percent + (now >= 0 ? ', marker ' + (now + 1) : ', between marker ' + (low + 1) + ' and marker ' + (low + 2));
@@ -1187,8 +1200,24 @@ function makeKickEngine(outRate) {
       knobs.forEach(function (id) { value[id + marker] = value[id]; });
       (function (n) {
         var mark = document.createElement('button');
-        mark.type = 'button'; mark.className = 'mark'; mark.textContent = n + 1; mark.setAttribute('aria-label', 'Marker ' + (n + 1));
-        mark.addEventListener('click', function () { value[MOD] = markAt(n); morphChanged(); });
+        mark.type = 'button'; mark.className = 'mark'; mark.setAttribute('aria-label', 'Marker ' + (n + 1));      /* no number to see: a marker is known by its place, and its place can change */
+        mark.addEventListener('click', function (e) { if (e.timeStamp - dragEnd < 400) return; value[MOD] = markAt(n); morphChanged(); });
+        /* a drag along the slider puts the marker at the place where it is let go, after 8 px so that a click stays a click */
+        var dragX = null, dragged = false;
+        mark.addEventListener('pointerdown', function (e) { if (value[PTS] >= 0) { mark.setPointerCapture(e.pointerId); dragX = e.clientX; dragged = false; } });
+        mark.addEventListener('pointermove', function (e) {
+          if (dragX === null || !mark.hasPointerCapture(e.pointerId)) return;
+          if (Math.abs(e.clientX - dragX) > 8) dragged = true;
+          if (dragged) mark.style.left = e.clientX - strip.getBoundingClientRect().left + 'px';
+        });
+        mark.addEventListener('pointerup', function (e) {
+          var box = strip.getBoundingClientRect(), last = value[PTS] + 1, wasDragged = dragged;
+          dragX = null; dragged = false;
+          if (!wasDragged) return;
+          dragEnd = e.timeStamp;
+          moveMarker(n, Math.max(0, Math.min(last, Math.round((e.clientX - box.left - 30) / (box.width - 60) * last))));
+        });
+        mark.addEventListener('pointercancel', function () { dragX = null; dragged = false; showMorph(); });
         strip.appendChild(mark); marks.push(mark);
       })(marker - 1);
     }
@@ -1217,12 +1246,24 @@ function makeKickEngine(outRate) {
       value[PTS]--; value[MOD] = markAt(Math.min(gone, count - 2)); morphChanged();
       marks[Math.min(gone, count - 2)].focus();
     }
+    function moveMarker(from, to) {      /* the marker goes to the place `to` with its values, the markers between the two places move by one, and MOD LEVEL goes with it */
+      knobs.forEach(function (id) {
+        var moved = value[id + (from + 1)], n;
+        for (n = from; n < to; n++) value[id + (n + 1)] = value[id + (n + 2)];
+        for (n = from; n > to; n--) value[id + (n + 1)] = value[id + n];
+        value[id + (to + 1)] = moved;
+      });
+      value[MOD] = markAt(to); morphChanged();
+      part('moved').textContent = 'Marker moved to place ' + (to + 1) + ' of ' + (value[PTS] + 2) + '.';
+    }
+    part('left').addEventListener('click', function () { moveMarker(markNow(), markNow() - 1); part(part('left').disabled ? 'right' : 'left').focus(); });
+    part('right').addEventListener('click', function () { moveMarker(markNow(), markNow() + 1); part(part('right').disabled ? 'left' : 'right').focus(); });
     strip.addEventListener('click', function (e) {      /* a click between two markers: a new marker there. No keyboard route: Kevin's decision, 2026-11-23 (D7) */
-      if (e.target !== strip) return;
+      if (e.target !== strip || e.timeStamp - dragEnd < 400) return;
       var box = strip.getBoundingClientRect();
       addMarker((e.clientX - box.left - 30) / (box.width - 60));
     });
-    removeButton.addEventListener('click', function () { confirmBox.hidden = false; part('yes').textContent = 'Remove Marker ' + (markNow() + 1); part('no').focus(); });
+    removeButton.addEventListener('click', function () { confirmBox.hidden = false; part('no').focus(); });
     part('no').addEventListener('click', function () { confirmBox.hidden = true; removeButton.focus(); });
     part('yes').addEventListener('click', function () { removeMarker(markNow()); });
     showMorph();
