@@ -291,4 +291,14 @@ for (const [rlen, bpm, bars] of [[1, 120, 1 / 8], [2, 120, 1 / 4], [3, 120, 1 / 
     assert.strictEqual(share.unpack(bad), null, 'a link that is not a kick is taken: ' + bad.slice(0, 20));
 }
 
+/* Import: a file gives what it holds, one preset or a list of presets, and only the numbers of each one; a file that is not a preset gives nothing */
+{
+  const share = kickShare(), one = { app: 'kick-craft', name: ' Grit ', draft: 61, values: { bpm: 90, level1: 5, bad: 'x', worse: null } };
+  assert.deepStrictEqual(share.read(JSON.stringify(one)), [{ name: 'Grit', draft: 61, values: { bpm: 90, level1: 5 } }], 'a file with one preset does not give that preset');
+  assert.deepStrictEqual(share.read(JSON.stringify({ app: 'kick-craft', presets: [one, { name: 'B'.repeat(50), values: {} }] })),
+    [{ name: 'Grit', draft: 61, values: { bpm: 90, level1: 5 } }, { name: 'B'.repeat(36), draft: 0, values: {} }], 'a file with a list of presets does not give each one');
+  for (const bad of ['nope', '5', 'null', '{}', '{"values":[1]}', '{"presets":[]}', '{"presets":[{"name":"a"}]}', '{"presets":[5]}'])
+    assert.strictEqual(share.read(bad), null, 'a file that is not a preset is taken: ' + bad);
+}
+
 console.log('engine: all tests pass');

@@ -133,7 +133,7 @@ section { display: grid; gap: var(--s2); }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 64</p>
+      <p class="version">Draft 65</p>
     </div>
     <div class="device">
       <div class="row">
@@ -318,7 +318,8 @@ section { display: grid; gap: var(--s2); }
           </div>
           <div class="presets">
               <button class="btn" id="share" type="button">Share Kick</button>
-              <button class="btn" id="preset-export" type="button">Export Preset</button>
+              <div class="field"><label for="export-what">Export</label><select id="export-what"><option value="current">Current Preset</option><option value="all">All Presets</option></select></div>
+              <button class="btn" id="preset-export" type="button">Export File</button>
               <button class="btn" id="preset-import" type="button">Import Preset…</button>
               <input id="preset-file" type="file" accept=".json,application/json" hidden>
               <div class="field" id="share-box" hidden><label for="share-link">Link</label><input id="share-link" type="text" readonly></div>
@@ -646,6 +647,19 @@ function kickShare() {
         if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
         for (var k in v) if (typeof v[k] !== 'number' || !isFinite(v[k])) return null;
         return { draft: Number(kick.d) || 0, values: v };
+      } catch (e) { return null; }
+    },
+    /* the presets of a file from Export File, one or a list. A file is data from outside the page: only the numbers of each preset are kept, its name is text, and null when one of them is not a preset */
+    read: function (text) {
+      try {
+        var body = JSON.parse(text), list = Array.isArray(body.presets) ? body.presets : [body], out = [];
+        for (var i = 0; i < list.length; i++) {
+          var from = list[i] && list[i].values, values = {};
+          if (!from || typeof from !== 'object' || Array.isArray(from)) return null;
+          for (var k in from) if (typeof from[k] === 'number' && isFinite(from[k])) values[k] = from[k];
+          out.push({ name: String(list[i].name || '').trim().slice(0, 36), draft: Number(list[i].draft) || 0, values: values });
+        }
+        return out.length ? out : null;
       } catch (e) { return null; }
     }
   };
@@ -1390,28 +1404,35 @@ function kickShare() {
     (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { tell('Link copied. It holds the kick as it plays now, with no markers.'); },
       function () { shareLink.focus(); shareLink.select(); tell('Copy the link from the Link box.'); });
   });
-  document.getElementById('preset-export').addEventListener('click', function () {
-    var one = byId(openId), name = one ? one.name : 'Kick', a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: 'kick-craft', name: name, draft: DRAFT, values: copy() })], { type: 'application/json' }));
-    a.download = slug(name) + '.kick.json'; a.click();
+  document.getElementById('preset-export').addEventListener('click', function () {      /* the open kick with its knobs as they are now, or each saved preset as it was saved */
+    var all = document.getElementById('export-what').value === 'all', one = byId(openId), name = one ? one.name : 'Kick', a = document.createElement('a');
+    if (all && !presets.length) { tell('No presets to export. Give a name and press Create New Preset first.'); return; }
+    var body = all ? { app: 'kick-craft', presets: presets.map(function (p) { return { name: p.name, draft: p.draft || 0, values: p.values }; }) } : { app: 'kick-craft', name: name, draft: DRAFT, values: copy() };
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(body)], { type: 'application/json' }));
+    a.download = (all ? 'kick-craft-presets' : slug(name)) + '.kick.json'; a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-    tell('Exported “' + name + '” with all its markers.');
+    tell(all ? 'Exported all the saved presets: ' + presets.length + '.' : 'Exported “' + name + '” with all its markers.');
   });
   document.getElementById('preset-import').addEventListener('click', function () { importFile.click(); });
-  importFile.addEventListener('change', function () {
+  importFile.addEventListener('change', function () {      /* each preset of the file becomes a new preset */
     var file = importFile.files[0]; importFile.value = ''; if (!file) return;
-    function notPreset(error) { console.error('Kick Craft: the file was not imported.', error && error.name); tell('This file is not a Kick Craft preset. Choose a file from Export Preset.'); document.getElementById('preset-import').focus(); }
-    if (file.size > 100000) { notPreset(); return; }
-    file.text().then(function (text) {      /* a file is data from outside the page: only its numbers are kept, and its name is text */
-      var body = JSON.parse(text), values = {}, base = String(body.name || '').trim().slice(0, 36), name, n;
-      if (!body.values || typeof body.values !== 'object' || Array.isArray(body.values)) throw new TypeError('no values');
-      for (var k in body.values) if (typeof body.values[k] === 'number' && isFinite(body.values[k])) values[k] = body.values[k];
-      if (!slug(base)) base = 'Imported';
-      for (name = base, n = 2; byId(slug(name)); n++) name = base + ' ' + n;      /* a preset with this name stays: the file takes the next free name */
-      return { name: name, values: values, savedAt: new Date().toISOString(), draft: Number(body.draft) || DRAFT };
-    }).then(function (one) {
-      var id = slug(one.name);
-      return savePreset(id, one).then(function () { showPresets(); presetList.value = id; openCopy(id); tell('Imported “' + one.name + '”. It is the open preset now.'); }, saveFailed);
+    function notPreset(error) { console.error('Kick Craft: the file was not imported.', error && error.name); tell('This file has no Kick Craft preset. Choose a file from Export File.'); document.getElementById('preset-import').focus(); }
+    if (file.size > 2000000) { notPreset(); return; }
+    file.text().then(function (text) {
+      var list = share.read(text), id = '', name = '';
+      if (!list) { notPreset(); return; }
+      return list.reduce(function (before, one) {
+        return before.then(function () {
+          var base = slug(one.name) ? one.name : 'Imported';
+          name = base; for (var n = 2; byId(slug(name)); n++) name = base + ' ' + n;      /* a preset with this name stays: the one of the file takes the next free name */
+          id = slug(name);
+          return savePreset(id, { name: name, values: one.values, savedAt: new Date().toISOString(), draft: one.draft || DRAFT });
+        });
+      }, Promise.resolve()).then(function () {
+        showPresets(); presetList.value = id;
+        if (list.length === 1) { openCopy(id); tell('Imported “' + name + '”. It is the open preset now.'); }
+        else tell('Imported the presets of the file: ' + list.length + '. Select one and press Load.');
+      }, function (error) { showPresets(); saveFailed(error); });
     }, notPreset);
   });
   function localPresets() {
