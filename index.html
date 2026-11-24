@@ -67,12 +67,8 @@ ul.plain { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s1); max-
 .pick select, .knob select { font: 1rem var(--mono); min-height: 44px; background: var(--dev); color: var(--dev-text); border: 2px solid var(--dev-edge); border-radius: 6px; padding: 0 var(--s1); }
 .device .hint { color: var(--dev-muted); }
 
-/* the wave stays in view while the page scrolls on a small screen */
-.wave { background: var(--dev); display: grid; gap: 4px; padding-block: 4px; }
-@media (min-height: 640px) {
-  .wave { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; }
-  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + clamp(10rem, 24vh, 24rem) + 5rem); }
-}
+/* the wave scrolls with the page, as all the rest: nothing stays fixed while the page moves under it */
+.wave { display: grid; gap: 4px; padding-block: 4px; }
 .scope { position: relative; height: clamp(10rem, 24vh, 24rem); border: 2px solid var(--dev-edge); border-radius: 4px; background: #000; }
 .scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .scope #cursor { pointer-events: none; }
@@ -132,7 +128,7 @@ td:first-child { font-family: var(--mono); font-weight: 600; }
   <section class="instrument" aria-labelledby="h-title">
     <div class="top">
       <h1 id="h-title">Kick Craft</h1>
-      <p class="version">Draft 44</p>
+      <p class="version">Draft 45</p>
     </div>
     <div class="device">
       <div class="row">
